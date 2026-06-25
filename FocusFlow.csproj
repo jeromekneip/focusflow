@@ -12,6 +12,14 @@
     <AssemblyName>FocusFlow</AssemblyName>
     <RootNamespace>FocusFlow</RootNamespace>
     <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>Jerome Kneip</Authors>
+    <Company>Jerome Kneip</Company>
+    <Product>FocusFlow</Product>
+    <Copyright>Copyright © 2026 Jerome Kneip</Copyright>
+    <Description>FocusFlow — a Pomodoro-style focus timer for Windows.</Description>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <!-- PerMonitorV2 is declared in app.manifest (authoritative for WPF + overlay
          positioning). Suppress the WinForms-only WFO0003 opinion warning that
          prefers ApplicationHighDpiMode; the manifest is intentional here. -->
