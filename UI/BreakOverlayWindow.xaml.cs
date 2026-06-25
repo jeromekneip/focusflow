@@ -68,7 +68,7 @@ public partial class BreakOverlayWindow : Window
         _secondScale = secondScale;
         _reduceMotion = reduceMotion;
         ReflectionText.Text = string.IsNullOrEmpty(reflectionPrompt)
-            ? "Step back — are you still working on the right thing?"  // L5: fallback
+            ? "Step back: are you still working on the right thing?"  // L5: fallback
             : reflectionPrompt;
 
         // The breathing ring must wear the PHASE accent (amber short / rose long),

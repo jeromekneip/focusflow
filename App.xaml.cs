@@ -191,10 +191,10 @@ public partial class App : Application
         string time = phase switch
         {
             Phase.Idle => "Idle",
-            Phase.AwaitingReturn => "Paused — click 'I'm back' to resume",
+            Phase.AwaitingReturn => "Paused: click 'I'm back' to resume",
             _ => $"{phase} {(int)remaining.TotalMinutes:00}:{remaining.Seconds:00}"
         };
-        _tray.SetTooltip($"FocusFlow — {time}");
+        _tray.SetTooltip($"FocusFlow: {time}");
     }
 
     // ---------------- Tray menu -> Engine ----------------

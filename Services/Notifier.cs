@@ -90,7 +90,7 @@ public sealed class Notifier
 
     private static (string title, string text) MessageFor(Phase phase) => phase switch
     {
-        Phase.Focus => ("Focus time", "Heads down — back to deep work."),
+        Phase.Focus => ("Focus time", "Heads down, back to deep work."),
         Phase.ShortBreak => ("Break time", "Short break. Stand up, look away, breathe."),
         Phase.LongBreak => ("Break time", "Long break. Step away and recharge."),
         Phase.AwaitingReturn => ("Break's over", "Click 'I'm back at my desk' to start focusing."),

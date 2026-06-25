@@ -65,7 +65,7 @@ public sealed class TrayIconService : IDisposable
         _notifyIcon = new NotifyIcon
         {
             Icon = LoadIcon(),
-            Text = "FocusFlow — Idle",
+            Text = "FocusFlow: Idle",
             Visible = true,
             ContextMenuStrip = menu
         };

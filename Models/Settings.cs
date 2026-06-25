@@ -57,7 +57,7 @@ public sealed class Settings
     public bool ConfirmReturnAfterBreak { get; set; } = true;
 
     public string ReflectionPrompt { get; set; } =
-        "Step back — are you still working on the right thing? What's the bigger picture?";
+        "Step back: are you still working on the right thing? What's the bigger picture?";
 
     // Saved mini-timer window position. NaN means "not set yet".
     public double MiniTimerX { get; set; } = double.NaN;
