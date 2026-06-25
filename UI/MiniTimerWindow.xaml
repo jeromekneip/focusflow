@@ -23,6 +23,28 @@
         <Border.Effect>
             <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="3" Opacity="0.45"/>
         </Border.Effect>
+        <!-- Outer Grid lets the gear button sit in the top-right corner as an
+             absolute overlay without disturbing the inner content layout. -->
+        <Grid>
+        <!-- Gear / settings button — top-right corner, 22×22 icon-size tap target.
+             Uses MiniButton style to match Skip. The Button handles MouseLeftButtonDown
+             before it can bubble to RootBorder's OnDrag handler, so clicking the
+             gear never starts a window drag. -->
+        <Button x:Name="SettingsButton"
+                Style="{StaticResource MiniButton}"
+                Width="22" Height="22"
+                Padding="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,6,6,0"
+                ToolTip="Settings"
+                Click="OnSettingsClick">
+            <TextBlock Text="&#xE713;"
+                       FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
+                       FontSize="12"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"/>
+        </Button>
         <Grid Margin="14,11,14,11">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -87,5 +109,6 @@
                 </StackPanel>
             </Grid>
         </Grid>
+        </Grid><!-- /outer overlay grid -->
     </Border>
 </Window>

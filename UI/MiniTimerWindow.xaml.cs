@@ -49,6 +49,7 @@ public partial class MiniTimerWindow : Window
 
     public event Action? PauseClicked;
     public event Action? SkipClicked;
+    public event Action? SettingsClicked;
 
     public MiniTimerWindow(Settings settings)
     {
@@ -243,4 +244,6 @@ public partial class MiniTimerWindow : Window
     private void OnPauseClick(object sender, RoutedEventArgs e) => PauseClicked?.Invoke();
 
     private void OnSkipClick(object sender, RoutedEventArgs e) => SkipClicked?.Invoke();
+
+    private void OnSettingsClick(object sender, RoutedEventArgs e) => SettingsClicked?.Invoke();
 }

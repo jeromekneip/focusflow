@@ -239,6 +239,10 @@ public partial class App : Application
             _engine.Skip();
             RefreshRunStateUi();
         };
+
+        // Gear icon on the mini timer reuses the SAME OpenSettings() method
+        // wired to the tray "Settings…" menu item — single source of truth.
+        _miniTimer.SettingsClicked += OpenSettings;
     }
 
     private void RefreshRunStateUi()

@@ -13,6 +13,7 @@ A Pomodoro-style focus timer for Windows 11. Sits in the system tray, stays out 
 - Autostart with Windows (optional, off by default)
 - Built-in presets: Pomodoro (25/5/15), Deep Work (50/10/30), Ultradian (90/20/20)
 - "Work 5 more min" break-postpone option: delays the pending break without skipping it or disrupting the long-break cadence
+- Gear icon on the mini timer for one-click Settings access (no tray required)
 
 ## Requirements
 
