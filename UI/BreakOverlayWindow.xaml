@@ -1,0 +1,283 @@
+<Window x:Class="FocusFlow.UI.BreakOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FocusFlow Break"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="Manual">
+
+    <!-- Layered hero surface. The whole composition fades in from RootLayer. -->
+    <Grid x:Name="RootLayer" Opacity="0">
+
+        <!-- (1) Base dusk gradient: deep indigo top -> warmer plum-charcoal bottom -->
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0.15,0" EndPoint="0.85,1">
+                <GradientStop Color="#F2161320" Offset="0"/>
+                <GradientStop Color="#F21E1A2B" Offset="0.45"/>
+                <GradientStop Color="#F22A2138" Offset="1"/>
+            </LinearGradientBrush>
+        </Grid.Background>
+
+        <!-- (2) Large soft off-center warm radial glow (gradient, NOT blur).
+             Origin ~0.34,0.40 — the asymmetric light the composition is built to. -->
+        <Rectangle>
+            <Rectangle.Fill>
+                <RadialGradientBrush GradientOrigin="0.34,0.40" Center="0.34,0.40"
+                                     RadiusX="0.8" RadiusY="0.85">
+                    <GradientStop Color="#705C3A2E" Offset="0"/>
+                    <GradientStop Color="#382F2A3A" Offset="0.45"/>
+                    <GradientStop Color="#00141220" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- (2b) Faint tiled grain texture. grain.png now bakes ~4% alpha, so the
+             layer runs at full opacity (cleaner than the old 0.5 multiplier). -->
+        <Rectangle x:Name="GrainLayer" Opacity="1.0">
+            <Rectangle.Fill>
+                <ImageBrush ImageSource="pack://application:,,,/Assets/grain.png"
+                            TileMode="Tile"
+                            Viewport="0,0,128,128"
+                            ViewportUnits="Absolute"
+                            Stretch="None"/>
+            </Rectangle.Fill>
+        </Rectangle>
+
+        <!-- (3) Composition shifted toward the off-center glow (optical center).
+             A Grid lets the content stack pool inside the warm light at ~0.40,0.46
+             rather than dead-center, so the light reads as designed, not incidental. -->
+        <Grid>
+            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" MaxWidth="1080"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                     Margin="0,-26,0,0">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="60">
+
+                    <!-- Phase label: tracked-out small caps in the PHASE ACCENT. -->
+                    <TextBlock x:Name="PhaseTitle"
+                               Style="{StaticResource TrackedCaps}"
+                               Text="SHORT BREAK"
+                               FontSize="{StaticResource Size.Label}"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,34"
+                               Opacity="0">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform x:Name="PhaseTitleT" Y="16"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+
+                    <!-- Breathing ring: ~340px ellipse with the countdown centered inside.
+                         All ring color stops are set from the phase accent in code-behind. -->
+                    <Grid x:Name="RingHost"
+                          Width="340" Height="340"
+                          HorizontalAlignment="Center"
+                          Opacity="0"
+                          RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="RingScale" ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform x:Name="RingHostT" Y="16"/>
+                            </TransformGroup>
+                        </Grid.RenderTransform>
+
+                        <!-- Faint outer glow ring (gradient stroke, no blur) -->
+                        <Ellipse Width="340" Height="340" StrokeThickness="22" Opacity="0.18">
+                            <Ellipse.Stroke>
+                                <RadialGradientBrush>
+                                    <GradientStop x:Name="GlowStop0" Color="#7FB7A6" Offset="0.78"/>
+                                    <GradientStop x:Name="GlowStop1" Color="#007FB7A6" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Stroke>
+                        </Ellipse>
+
+                        <!-- Soft inner fill that pulses gently with the breath -->
+                        <Ellipse x:Name="RingInner" Width="296" Height="296" Opacity="0.08">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop x:Name="InnerFillStop" Color="#7FB7A6" Offset="0"/>
+                                    <GradientStop x:Name="InnerFillStop1" Color="#007FB7A6" Offset="1"/>
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <!-- The ring itself: soft gradient stroke (bright -> dark accent). -->
+                        <Ellipse x:Name="RingStrokeEl" Width="300" Height="300" StrokeThickness="2.2">
+                            <Ellipse.Stroke>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop x:Name="RingStop0" Color="#B8E0D2" Offset="0"/>
+                                    <GradientStop x:Name="RingStop1" Color="#5C8C7E" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Ellipse.Stroke>
+                        </Ellipse>
+
+                        <!-- Big tabular countdown centered inside the ring. Stays warm white. -->
+                        <TextBlock x:Name="CountdownLabel"
+                                   Style="{StaticResource Numeral}"
+                                   Text="00:00"
+                                   FontSize="{StaticResource Size.Display}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Reflection prompt: serif, constrained measure. The emotional
+                         centerpiece — primary warm white at slightly reduced opacity
+                         (not muted), with Body line-height for breathing room. -->
+                    <TextBlock x:Name="ReflectionText"
+                               Style="{StaticResource Body}"
+                               Text=""
+                               FontSize="{StaticResource Size.Heading}"
+                               LineHeight="34"
+                               Foreground="{StaticResource Brush.Text.Primary}"
+                               Opacity="0.88"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center"
+                               MaxWidth="560"
+                               Margin="0,42,0,0"
+                               HorizontalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform x:Name="ReflectionTextT" Y="16"/>
+                        </TextBlock.RenderTransform>
+                        <!-- own opacity drives the entrance fade; outer Opacity is the
+                             resting tone. A wrapper handles the fade-in. -->
+                    </TextBlock>
+
+                    <!-- "Break ended X ago" accountability counter; shown only while
+                         confirming. Rendered as NORMAL caption text (no space-hack);
+                         numerals are tabular via the Numeral-derived treatment.
+                         Colored from the phase accent in code-behind. -->
+                    <TextBlock x:Name="AwaitingSinceLabel"
+                               Style="{StaticResource Caption}"
+                               Text=""
+                               FontWeight="SemiBold"
+                               Typography.NumeralAlignment="Tabular"
+                               Foreground="{StaticResource Brush.Accent.Awaiting}"
+                               TextAlignment="Center"
+                               Margin="0,34,0,0"
+                               HorizontalAlignment="Center"
+                               Opacity="0"
+                               Visibility="Collapsed"/>
+
+                    <!-- Buttons host: holds both during-break and confirm controls -->
+                    <Grid x:Name="ButtonsHost" Margin="0,48,0,0" Opacity="0">
+                        <Grid.RenderTransform>
+                            <TranslateTransform x:Name="ButtonsT" Y="16"/>
+                        </Grid.RenderTransform>
+
+                        <!-- During-break controls: skip + extend, ghost. -->
+                        <StackPanel x:Name="BreakControls"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center">
+                            <Button x:Name="BackButton"
+                                    Style="{StaticResource GhostButton}"
+                                    Content="Skip break"
+                                    Margin="0,0,16,0"
+                                    Click="OnBackClick"/>
+                            <Button x:Name="ExtendButton"
+                                    Style="{StaticResource GhostButton}"
+                                    Content="+5 min"
+                                    Click="OnExtendClick"/>
+                        </StackPanel>
+
+                        <!-- Post-break confirm control: single prominent button.
+                             IsDefault so Enter triggers it (full-screen modal). -->
+                        <StackPanel x:Name="ConfirmControls"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    Visibility="Collapsed">
+                            <Button x:Name="ConfirmButton"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Content="I'm back at my desk"
+                                    IsDefault="True"
+                                    Click="OnConfirmClick"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Viewbox>
+        </Grid>
+
+        <!-- ============================================================
+             Storyboards
+             ============================================================ -->
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <!-- Background fade-in (~600ms) -->
+                        <DoubleAnimation Storyboard.TargetName="RootLayer"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0" To="1" Duration="0:0:0.6"/>
+
+                        <!-- Staggered fade-up: label -> ring -> prompt -> buttons (~120ms stagger) -->
+                        <DoubleAnimation Storyboard.TargetName="PhaseTitle"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0" To="1" BeginTime="0:0:0.45" Duration="0:0:0.5"/>
+                        <DoubleAnimation Storyboard.TargetName="PhaseTitleT"
+                                         Storyboard.TargetProperty="Y"
+                                         From="16" To="0" BeginTime="0:0:0.45" Duration="0:0:0.5">
+                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+
+                        <DoubleAnimation Storyboard.TargetName="RingHost"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0" To="1" BeginTime="0:0:0.57" Duration="0:0:0.5"/>
+                        <DoubleAnimation Storyboard.TargetName="RingHostT"
+                                         Storyboard.TargetProperty="Y"
+                                         From="16" To="0" BeginTime="0:0:0.57" Duration="0:0:0.5">
+                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+
+                        <!-- Reflection prompt fades to its RESTING tone (0.88), not 1.0. -->
+                        <DoubleAnimation Storyboard.TargetName="ReflectionText"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0" To="0.88" BeginTime="0:0:0.69" Duration="0:0:0.5"/>
+                        <DoubleAnimation Storyboard.TargetName="ReflectionTextT"
+                                         Storyboard.TargetProperty="Y"
+                                         From="16" To="0" BeginTime="0:0:0.69" Duration="0:0:0.5">
+                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                         Storyboard.TargetName="ButtonsHost"
+                                         From="0" To="1" BeginTime="0:0:0.81" Duration="0:0:0.5"/>
+                        <DoubleAnimation Storyboard.TargetName="ButtonsT"
+                                         Storyboard.TargetProperty="Y"
+                                         From="16" To="0" BeginTime="0:0:0.81" Duration="0:0:0.5">
+                            <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+
+                        <!-- Breathing loop: true resting respiration ~5s each way
+                             (~10s/cycle), scaling 1.0 <-> 1.085. -->
+                        <DoubleAnimation Storyboard.TargetName="RingScale"
+                                         Storyboard.TargetProperty="ScaleX"
+                                         From="1.0" To="1.085"
+                                         BeginTime="0:0:1.3" Duration="0:0:5"
+                                         AutoReverse="True" RepeatBehavior="Forever">
+                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName="RingScale"
+                                         Storyboard.TargetProperty="ScaleY"
+                                         From="1.0" To="1.085"
+                                         BeginTime="0:0:1.3" Duration="0:0:5"
+                                         AutoReverse="True" RepeatBehavior="Forever">
+                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <!-- Inner fill opacity pulses with the breath — amplitude raised
+                             to a meaningful 0.05 -> 0.20 (was a near-invisible 0.06->0.14). -->
+                        <DoubleAnimation Storyboard.TargetName="RingInner"
+                                         Storyboard.TargetProperty="Opacity"
+                                         From="0.05" To="0.20"
+                                         BeginTime="0:0:1.3" Duration="0:0:5"
+                                         AutoReverse="True" RepeatBehavior="Forever">
+                            <DoubleAnimation.EasingFunction><SineEase EasingMode="EaseInOut"/></DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+    </Grid>
+</Window>

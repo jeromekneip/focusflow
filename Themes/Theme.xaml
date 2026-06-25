@@ -1,0 +1,586 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ============================================================
+         QUIET HOURS theme — the "CSS variables" of FocusFlow.
+         Dominant warm dark + sharp phase-accent sparks.
+         Merged in App.xaml via Application.Resources.MergedDictionaries.
+         ============================================================ -->
+
+    <!-- Font families (Windows-native only) -->
+    <FontFamily x:Key="Font.Display">Sitka Heading, Sitka Subheading, Sitka, Cambria, Georgia</FontFamily>
+    <FontFamily x:Key="Font.Serif">Sitka Subheading, Sitka, Cambria, Georgia</FontFamily>
+    <FontFamily x:Key="Font.Sans">Segoe UI Variable Text, Segoe UI</FontFamily>
+
+    <!-- Palette: colors (raw) -->
+    <Color x:Key="Color.Bg.Deep">#14121C</Color>
+    <Color x:Key="Color.Dusk.Top">#1E1A2B</Color>
+    <Color x:Key="Color.Dusk.Bottom">#2A2138</Color>
+    <Color x:Key="Color.Surface">#211C2E</Color>
+    <Color x:Key="Color.Surface.Hi">#2B2440</Color>
+    <Color x:Key="Color.Text.Primary">#F4EEE3</Color>
+    <!-- Muted lifted one step (#B7AEC2 -> #C6BFD2) for a touch more presence;
+         still ~10:1 over the darkest dusk so muted-on-surface stays well >= 4.5:1. -->
+    <Color x:Key="Color.Text.Muted">#C6BFD2</Color>
+
+    <Color x:Key="Color.Accent.Focus">#7FB7A6</Color>
+    <Color x:Key="Color.Accent.Short">#E8B98C</Color>
+    <Color x:Key="Color.Accent.Long">#E0A0A0</Color>
+    <Color x:Key="Color.Accent.Awaiting">#E8B98C</Color>
+
+    <Color x:Key="Color.Glow.Warm">#5C3A2E</Color>
+
+    <!-- Palette: brushes -->
+    <SolidColorBrush x:Key="Brush.Bg.Deep" Color="{StaticResource Color.Bg.Deep}"/>
+    <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}"/>
+    <SolidColorBrush x:Key="Brush.Surface.Hi" Color="{StaticResource Color.Surface.Hi}"/>
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="{StaticResource Color.Text.Primary}"/>
+    <SolidColorBrush x:Key="Brush.Text.Muted" Color="{StaticResource Color.Text.Muted}"/>
+
+    <SolidColorBrush x:Key="Brush.Accent.Focus" Color="{StaticResource Color.Accent.Focus}"/>
+    <SolidColorBrush x:Key="Brush.Accent.Short" Color="{StaticResource Color.Accent.Short}"/>
+    <SolidColorBrush x:Key="Brush.Accent.Long" Color="{StaticResource Color.Accent.Long}"/>
+    <SolidColorBrush x:Key="Brush.Accent.Awaiting" Color="{StaticResource Color.Accent.Awaiting}"/>
+
+    <!-- Hairline border = white @ ~8% opacity -->
+    <SolidColorBrush x:Key="Brush.Hairline" Color="#FFFFFF" Opacity="0.08"/>
+    <SolidColorBrush x:Key="Brush.Hairline.Hi" Color="#FFFFFF" Opacity="0.16"/>
+    <!-- Control border/fill tokens that stay DISCERNIBLE at rest on the dark
+         surfaces (the 8% hairline alone vanished on the translucent card). These
+         give ghost/mini controls a quiet but visible resting frame + fill without
+         leaving the dusk aesthetic. -->
+    <SolidColorBrush x:Key="Brush.Control.Border" Color="#FFFFFF" Opacity="0.28"/>
+    <SolidColorBrush x:Key="Brush.Control.Fill" Color="#FFFFFF" Opacity="0.07"/>
+
+    <!-- Translucent dark card surface for the mini timer / floating chrome -->
+    <SolidColorBrush x:Key="Brush.Surface.Translucent" Color="#E6211C2E"/>
+
+    <!-- Deep dusk gradient for the settings card background -->
+    <LinearGradientBrush x:Key="Brush.Dusk.Vertical" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="{StaticResource Color.Dusk.Top}" Offset="0"/>
+        <GradientStop Color="{StaticResource Color.Dusk.Bottom}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ============================================================
+         TYPE SCALE — modular ratio ~1.25 (major third) anchored at
+         Body=16. One source of truth for every FontSize; call sites
+         reference these instead of magic numbers.
+           Display  ~118  hero countdown numeral
+           Title     30   serif window titles / "Welcome back"
+           Heading   24   serif reflection prompt
+           Body      16   default UI / primary button
+           Label     13   UI controls, field text
+           Caption   12   small muted captions
+           Micro     11   tracked-out micro-labels / phase dots
+         ============================================================ -->
+    <sys:Double x:Key="Size.Display">118</sys:Double>
+    <sys:Double x:Key="Size.Title">30</sys:Double>
+    <sys:Double x:Key="Size.Heading">24</sys:Double>
+    <sys:Double x:Key="Size.Body">16</sys:Double>
+    <sys:Double x:Key="Size.Label">13</sys:Double>
+    <sys:Double x:Key="Size.Caption">12</sys:Double>
+    <sys:Double x:Key="Size.Micro">11</sys:Double>
+
+    <!-- ============================================================
+         RADIUS SCALE — collapsed from the old 14/11/8/7/6 grab-bag to
+         a tight 3-step token set referenced everywhere.
+           Lg = 14  floating cards / outer surfaces
+           Md = 8   buttons / fields / segments
+           Sm = 6   checkbox glyph / inner chips
+         ============================================================ -->
+    <CornerRadius x:Key="Radius.Lg">14</CornerRadius>
+    <CornerRadius x:Key="Radius.Md">8</CornerRadius>
+    <CornerRadius x:Key="Radius.Sm">6</CornerRadius>
+    <!-- Scalar mirrors of the radii, for FocusVisual hairlines that need a number. -->
+    <sys:Double x:Key="RadiusValue.Md">8</sys:Double>
+    <sys:Double x:Key="RadiusValue.Sm">6</sys:Double>
+
+    <!-- ============================================================
+         FOCUS VISUAL STYLES — soft accent hairline traced at the
+         control's corner radius, replacing the default dotted rect.
+         ============================================================ -->
+    <Style x:Key="FocusVisual.Md" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="{StaticResource Radius.Md}"
+                            Margin="-2"
+                            SnapsToDevicePixels="True"
+                            BorderThickness="1.4"
+                            BorderBrush="{StaticResource Brush.Accent.Focus}"
+                            Opacity="0.85"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="FocusVisual.Sm" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="{StaticResource Radius.Sm}"
+                            Margin="-2"
+                            SnapsToDevicePixels="True"
+                            BorderThickness="1.4"
+                            BorderBrush="{StaticResource Brush.Accent.Focus}"
+                            Opacity="0.85"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============================================================
+         TextBlock styles
+         ============================================================ -->
+
+    <!-- Big serif headings / titles -->
+    <Style x:Key="Display" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Title}"/>
+        <Setter Property="FontWeight" Value="Light"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+
+    <!-- Big tabular countdown numerals -->
+    <Style x:Key="Numeral" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Display}"/>
+        <Setter Property="FontWeight" Value="Light"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+
+    <!-- Tracked-out uppercase sans micro-labels.
+         Letter-spacing isn't a native WPF property; we emulate it with a
+         per-glyph right-margin via a Run-friendly attached approach. Since
+         TextBlock can't space glyphs declaratively, this style standardizes
+         the LOOK (weight/size/caps intent) and the TrackedCaps helper applies
+         spacing for STATIC short labels. Dynamic/prose text uses Caption/Body. -->
+    <Style x:Key="Label" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Label}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+    </Style>
+
+    <!-- TrackedCaps: the canonical style for STATIC single-word / short caps
+         labels (FOCUS, SHORT BREAK, section headers). Tracking is expressed as
+         glyph kerning emulation: we cannot set true letter-spacing in pure XAML,
+         so callers wanting tracked text use the TrackOut helper on STATIC strings
+         only. This style carries the visual treatment (caps weight + muted tone).
+         Prose / numerals must NEVER use this. -->
+    <Style x:Key="TrackedCaps" TargetType="TextBlock" BasedOn="{StaticResource Label}"/>
+
+    <!-- Serif body / reflection prompt. LineHeight + BlockLineHeight so the
+         24px serif prompt breathes across wraps. -->
+    <Style x:Key="Body" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Serif}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Body}"/>
+        <Setter Property="FontWeight" Value="Regular"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="LineHeight" Value="34"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+    </Style>
+
+    <!-- Small muted sans caption -->
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Caption}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+    </Style>
+
+    <!-- ============================================================
+         Button styles
+         ============================================================ -->
+
+    <!-- Ghost: text + subtle outline, brightens on hover. Refined, not chunky.
+         Resting state lifted to a discernible frame (faint fill + control-border
+         token) so the outline reads on dark surfaces without hover. -->
+    <Style x:Key="GhostButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Label}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Control.Fill}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Control.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Md}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Md}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#0AFFFFFF"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Primary: filled accent, dark text, soft glow, hover lifts/brightens.
+         ACCENT-AGNOSTIC: the glow + hover/pressed tints derive from the button's
+         OWN Background accent. The template reads Background for the resting fill
+         and DropShadow color; hover/pressed brighten/darken via a translucent
+         white/black scrim laid over the accent rather than hard-coded amber. So
+         an amber confirm button glows amber, a sage Save button glows sage, each
+         internally consistent — no per-color duplication. -->
+    <Style x:Key="PrimaryButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Body}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="#1A1622"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Accent.Awaiting}"/>
+        <Setter Property="Padding" Value="30,15"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Md}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <!-- Bd carries the accent fill (TemplateBinding Background) and a
+                         DropShadow whose Color is bound to that same accent, so the
+                         glow always matches the button. Scrim sits on top to lighten
+                         (hover) / darken (press) without changing the base color. -->
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Md}"
+                            Background="{TemplateBinding Background}"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="Sc" ScaleX="1" ScaleY="1"/>
+                        </Border.RenderTransform>
+                        <Border.Effect>
+                            <DropShadowEffect x:Name="Sh"
+                                              Color="{Binding Background.Color,
+                                                      RelativeSource={RelativeSource TemplatedParent}}"
+                                              BlurRadius="26"
+                                              ShadowDepth="0"
+                                              Opacity="0.45"/>
+                        </Border.Effect>
+                        <Grid>
+                            <!-- Translucent white scrim for hover lift; transparent at rest. -->
+                            <Border x:Name="Scrim"
+                                    CornerRadius="{StaticResource Radius.Md}"
+                                    Background="#FFFFFF"
+                                    Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sc"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.03" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sc"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.03" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sh"
+                                                         Storyboard.TargetProperty="BlurRadius"
+                                                         To="34" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sh"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.6" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Scrim"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.16" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Sc"
+                                                         Storyboard.TargetProperty="ScaleX"
+                                                         To="1.0" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sc"
+                                                         Storyboard.TargetProperty="ScaleY"
+                                                         To="1.0" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sh"
+                                                         Storyboard.TargetProperty="BlurRadius"
+                                                         To="26" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Sh"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0.45" Duration="0:0:0.15"/>
+                                        <DoubleAnimation Storyboard.TargetName="Scrim"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="0:0:0.15"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <!-- Darken via black scrim instead of a hard-coded color. -->
+                            <Setter TargetName="Scrim" Property="Background" Value="#1A1622"/>
+                            <Setter TargetName="Scrim" Property="Opacity" Value="0.18"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Minimal icon-ish button for the mini timer (brighten/raise on hover).
+         Resting state is now DISCERNIBLE on the translucent card: a faint white
+         fill + a stronger hairline (was transparent fill + ~8% border, which was
+         effectively invisible until hover). Hover still brightens. -->
+    <Style x:Key="MiniButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Micro}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Control.Fill}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Control.Border}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Sm}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Sm}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#1AFFFFFF"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#2EFFFFFF"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#0DFFFFFF"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Mini PRIMARY: the mini timer's headline action (Start / "I'm back").
+         A small filled accent pill so the primary action is unmistakable at rest,
+         scaled for the compact card. Accent-agnostic: fill comes from Background
+         (sage Focus accent by default), dark text, brightens on hover via a white
+         scrim — mirrors PrimaryButton's language at mini scale. -->
+    <Style x:Key="MiniPrimaryButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Micro}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="#1A1622"/>
+        <Setter Property="Background" Value="{StaticResource Brush.Accent.Focus}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Sm}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Sm}"
+                            Background="{TemplateBinding Background}">
+                        <Grid>
+                            <Border x:Name="Scrim"
+                                    CornerRadius="{StaticResource Radius.Sm}"
+                                    Background="#FFFFFF"
+                                    Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Scrim" Property="Opacity" Value="0.16"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Scrim" Property="Background" Value="#1A1622"/>
+                            <Setter TargetName="Scrim" Property="Opacity" Value="0.18"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Segmented preset chip for the settings window. Now has a SELECTED state
+         (Tag="Selected") giving the active preset an accent fill + outline. -->
+    <Style x:Key="SegmentButton" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Caption}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Muted}"/>
+        <Setter Property="Background" Value="#1AFFFFFF"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Hairline}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Md}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Md}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#26FFFFFF"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#12FFFFFF"/>
+                        </Trigger>
+                        <!-- Active preset: accent-tinted fill + accent hairline + bright text. -->
+                        <Trigger Property="Tag" Value="Selected">
+                            <Setter TargetName="Bd" Property="Background" Value="#26E8B98C"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Brush.Accent.Awaiting}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Dark text field with accent focus border -->
+    <Style x:Key="FieldBox" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Label}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource Brush.Accent.Focus}"/>
+        <Setter Property="Background" Value="#14000000"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Hairline.Hi}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="9,7"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource Brush.Accent.Focus}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Bd"
+                            CornerRadius="{StaticResource Radius.Sm}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#33FFFFFF"/>
+                        </Trigger>
+                        <!-- Keyboard focus already shows the accent border here, which
+                             doubles as the focus visual (no dotted rectangle). -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Brush.Accent.Focus}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Restyled checkbox: accent-marked, dark box. Now has a pressed state and
+         a themed focus hairline. -->
+    <Style x:Key="ThemedCheckBox" TargetType="CheckBox">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}"/>
+        <Setter Property="FontSize" Value="{StaticResource Size.Label}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Margin" Value="0,7,0,0"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusVisual.Sm}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Box"
+                                Width="20" Height="20"
+                                CornerRadius="{StaticResource Radius.Sm}"
+                                Background="#14000000"
+                                BorderBrush="{StaticResource Brush.Hairline.Hi}"
+                                BorderThickness="1"
+                                VerticalAlignment="Center">
+                            <Path x:Name="Check"
+                                  Data="M4,9 L8,13 L15,5"
+                                  Stroke="#1A1622"
+                                  StrokeThickness="2.2"
+                                  StrokeEndLineCap="Round"
+                                  StrokeStartLineCap="Round"
+                                  Stretch="None"
+                                  Visibility="Collapsed"/>
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center"
+                                          Margin="11,0,0,0"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource Brush.Accent.Focus}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Brush.Accent.Focus}"/>
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="#55FFFFFF"/>
+                        </Trigger>
+                        <!-- Pressed: momentary dim so the toggle feels tactile. -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Box" Property="Opacity" Value="0.7"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

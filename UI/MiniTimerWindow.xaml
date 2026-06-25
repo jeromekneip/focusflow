@@ -1,0 +1,91 @@
+<Window x:Class="FocusFlow.UI.MiniTimerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="FocusFlow"
+        Width="208"
+        MinHeight="104"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        SizeToContent="Height">
+    <!-- Compact rounded card: translucent dark surface, hairline border, soft shadow.
+         DropShadowEffect is allowed here (small element). -->
+    <Border x:Name="RootBorder"
+            CornerRadius="{StaticResource Radius.Lg}"
+            Background="{StaticResource Brush.Surface.Translucent}"
+            BorderBrush="{StaticResource Brush.Hairline}"
+            BorderThickness="1"
+            Margin="8"
+            MouseLeftButtonDown="OnDrag">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="18" ShadowDepth="3" Opacity="0.45"/>
+        </Border.Effect>
+        <Grid Margin="14,11,14,11">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Phase dot + tracked sans label -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse x:Name="PhaseDot"
+                         Width="9" Height="9"
+                         Fill="{StaticResource Brush.Text.Muted}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,8,0"/>
+                <TextBlock x:Name="PhaseLabel"
+                           Style="{StaticResource Label}"
+                           Text="IDLE"
+                           FontSize="{StaticResource Size.Micro}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Tabular serif countdown -->
+            <TextBlock x:Name="TimeLabel"
+                       Grid.Row="1"
+                       Style="{StaticResource Numeral}"
+                       Text="00:00"
+                       FontSize="{StaticResource Size.Title}"
+                       Margin="0,1,0,0"/>
+
+            <!-- Control row. Buttons are visible AT REST (no hover needed). Which
+                 buttons show is driven per AppPhase in code-behind:
+                   Idle           -> StartButton (primary accent pill)
+                   Running phases  -> PauseButton (Pause/Resume) + SkipButton
+                   AwaitingReturn  -> PauseButton relabeled "I'm back" -->
+            <Grid Grid.Row="2" Margin="0,9,0,0">
+                <!-- Idle: single prominent Start. -->
+                <Button x:Name="StartButton"
+                        Style="{StaticResource MiniPrimaryButton}"
+                        Content="Start"
+                        Height="26"
+                        HorizontalAlignment="Stretch"
+                        Padding="0,0,0,0"
+                        Click="OnPauseClick"/>
+
+                <!-- Running / AwaitingReturn: Pause/Resume (+ Skip when running). -->
+                <StackPanel x:Name="RunControls"
+                            Orientation="Horizontal"
+                            Visibility="Collapsed">
+                    <Button x:Name="PauseButton"
+                            Style="{StaticResource MiniPrimaryButton}"
+                            Content="Pause"
+                            Width="92" Height="26"
+                            Padding="0,0,0,0"
+                            Click="OnPauseClick"
+                            Margin="0,0,8,0"/>
+                    <Button x:Name="SkipButton"
+                            Style="{StaticResource MiniButton}"
+                            Content="Skip"
+                            Width="60" Height="26"
+                            Padding="0,0,0,0"
+                            Click="OnSkipClick"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
