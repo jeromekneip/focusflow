@@ -26,34 +26,42 @@
         <!-- Outer Grid lets the gear button sit in the top-right corner as an
              absolute overlay without disturbing the inner content layout. -->
         <Grid>
-        <!-- Gear / settings button — top-right corner, 22×22 icon-size tap target.
-             Uses MiniButton style to match Skip. The Button handles MouseLeftButtonDown
-             before it can bubble to RootBorder's OnDrag handler, so clicking the
-             gear never starts a window drag. -->
+        <!-- Gear / settings button — top-right corner. Bumped to 26×26 (M5) so the
+             hit area reads without hover; 6px offset keeps it clear of the drag
+             zone. The Button handles MouseLeftButtonDown before it can bubble to
+             RootBorder's OnDrag handler, so clicking the gear never starts a drag. -->
         <Button x:Name="SettingsButton"
                 Style="{StaticResource MiniButton}"
-                Width="22" Height="22"
+                Width="26" Height="26"
                 Padding="0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Margin="0,6,6,0"
                 ToolTip="Settings"
+                AutomationProperties.Name="Settings"
+                TabIndex="2"
                 Click="OnSettingsClick">
             <TextBlock Text="&#xE713;"
                        FontFamily="Segoe MDL2 Assets, Segoe Fluent Icons"
-                       FontSize="12"
+                       FontSize="13"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"/>
         </Button>
-        <Grid Margin="14,11,14,11">
+        <!-- Inner content grid: 6px right padding reserves a non-drag gap next to
+             the gear button so a near-miss on it does not start a window drag (M5). -->
+        <Grid Margin="14,11,34,11">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Phase dot + tracked sans label -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- Phase dot + tracked sans label.
+                 AutomationProperties.Name on the StackPanel surfaces the clean
+                 phase word to screen readers (H1, M2); the visual TrackOut spacing
+                 is preserved on the TextBlock underneath. -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center"
+                        AutomationProperties.Name="Phase">
                 <Ellipse x:Name="PhaseDot"
                          Width="9" Height="9"
                          Fill="{StaticResource Brush.Text.Muted}"
@@ -63,7 +71,8 @@
                            Style="{StaticResource Label}"
                            Text="IDLE"
                            FontSize="{StaticResource Size.Micro}"
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="Idle"/>
             </StackPanel>
 
             <!-- Tabular serif countdown -->
@@ -80,16 +89,18 @@
                    Running phases  -> PauseButton (Pause/Resume) + SkipButton
                    AwaitingReturn  -> PauseButton relabeled "I'm back" -->
             <Grid Grid.Row="2" Margin="0,9,0,0">
-                <!-- Idle: single prominent Start. -->
+                <!-- Idle: single prominent Start. TabIndex=0 (primary action, M1). -->
                 <Button x:Name="StartButton"
                         Style="{StaticResource MiniPrimaryButton}"
                         Content="Start"
                         Height="26"
                         HorizontalAlignment="Stretch"
                         Padding="0,0,0,0"
+                        TabIndex="0"
                         Click="OnPauseClick"/>
 
-                <!-- Running / AwaitingReturn: Pause/Resume (+ Skip when running). -->
+                <!-- Running / AwaitingReturn: Pause/Resume (+ Skip when running).
+                     Pause/Resume is the primary action -> TabIndex=0; Skip -> 1 (M1). -->
                 <StackPanel x:Name="RunControls"
                             Orientation="Horizontal"
                             Visibility="Collapsed">
@@ -98,6 +109,7 @@
                             Content="Pause"
                             Width="92" Height="26"
                             Padding="0,0,0,0"
+                            TabIndex="0"
                             Click="OnPauseClick"
                             Margin="0,0,8,0"/>
                     <Button x:Name="SkipButton"
@@ -105,6 +117,7 @@
                             Content="Skip"
                             Width="60" Height="26"
                             Padding="0,0,0,0"
+                            TabIndex="1"
                             Click="OnSkipClick"/>
                 </StackPanel>
             </Grid>

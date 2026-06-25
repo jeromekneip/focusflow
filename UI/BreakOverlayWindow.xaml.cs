@@ -16,6 +16,7 @@
 
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -37,6 +38,8 @@ namespace FocusFlow.UI;
 public partial class BreakOverlayWindow : Window
 {
     private bool _secondScale;
+    // H2: gate looping animations on ReduceMotion setting + OS ClientAreaAnimation.
+    private bool _reduceMotion;
 
     private DateTime? _awaitingSince;
     private DispatcherTimer? _awaitingTicker;
@@ -58,12 +61,15 @@ public partial class BreakOverlayWindow : Window
 
     private readonly WinForms.Screen _screen;
 
-    public BreakOverlayWindow(WinForms.Screen screen, string reflectionPrompt, bool secondScale, Phase phase)
+    public BreakOverlayWindow(WinForms.Screen screen, string reflectionPrompt, bool secondScale, Phase phase, bool reduceMotion = false)
     {
         InitializeComponent();
         _screen = screen;
         _secondScale = secondScale;
-        ReflectionText.Text = reflectionPrompt;
+        _reduceMotion = reduceMotion;
+        ReflectionText.Text = string.IsNullOrEmpty(reflectionPrompt)
+            ? "Step back — are you still working on the right thing?"  // L5: fallback
+            : reflectionPrompt;
 
         // The breathing ring must wear the PHASE accent (amber short / rose long),
         // not the hard-coded sage. One accent -> two cohesive shades for the ring
@@ -81,6 +87,10 @@ public partial class BreakOverlayWindow : Window
         // Keyboard affordance for the full-screen modal (mouse no longer forced).
         // Routes Enter/Esc to the SAME actions as the buttons — no new behavior.
         KeyDown += OnKeyDown;
+        // H2: stop looping animations when ReduceMotion or OS ClientAreaAnimation
+        // is off. Runs after the XAML Loaded trigger fires the entrance storyboard,
+        // then immediately cancels the forever-looping ring/inner-fill segments.
+        Loaded += OnLoadedAnimationGate;
     }
 
     private bool _confirmShown;
@@ -158,6 +168,37 @@ public partial class BreakOverlayWindow : Window
 
     private static Color Transparent(Color c) => Color.FromArgb(0, c.R, c.G, c.B);
 
+    /// <summary>
+    /// H2: after the XAML entrance storyboard fires, stop any forever-looping
+    /// animations when ReduceMotion is enabled or the OS has ClientAreaAnimation
+    /// disabled. The entrance fades are self-terminating and are left untouched —
+    /// only the continuous ring-scale and ring-inner-opacity loops are cancelled,
+    /// leaving the ring rendered at its resting scale (1.0) and resting opacity.
+    /// </summary>
+    private void OnLoadedAnimationGate(object? sender, RoutedEventArgs e)
+    {
+        bool animationsEnabled = !_reduceMotion && SystemParameters.ClientAreaAnimation;
+        if (animationsEnabled) return; // nothing to suppress
+
+        // Dispatch slightly after Loaded so the entrance storyboard has started
+        // before we cancel only the forever loops. The entrance fades have a
+        // BeginTime >= 0.45s so they won't be affected by this immediate cancel.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+        {
+            // Stop the forever-looping RingScale X/Y animations.
+            RingScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            RingScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            // Clamp scale to the rest value (1.0) so it doesn't stay at the
+            // animation's initial From="1.0" by accident.
+            RingScale.ScaleX = 1.0;
+            RingScale.ScaleY = 1.0;
+
+            // Stop the forever RingInner opacity loop and settle at rest.
+            RingInner.BeginAnimation(UIElement.OpacityProperty, null);
+            RingInner.Opacity = 0.08; // resting tone as defined in XAML
+        });
+    }
+
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         CoverScreen();
@@ -178,10 +219,13 @@ public partial class BreakOverlayWindow : Window
     /// Set the small tracked-out phase label. This is a STATIC short caps label
     /// ("SHORT BREAK" / "LONG BREAK"), so emulated letter-spacing via TrackOut is
     /// appropriate here. Dynamic / prose text must NOT use TrackOut.
+    /// M2: AutomationProperties.Name is set to the clean title word so screen
+    /// readers do not spell out the inter-character spaces.
     /// </summary>
     public void SetPhaseTitle(string title)
     {
         PhaseTitle.Text = TrackOut(title);
+        AutomationProperties.SetName(PhaseTitle, title);
     }
 
     /// <summary>

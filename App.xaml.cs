@@ -298,7 +298,7 @@ public partial class App : Application
 
         foreach (var screen in WinForms.Screen.AllScreens)
         {
-            var overlay = new BreakOverlayWindow(screen, _settings.ReflectionPrompt, secondScale, phase);
+            var overlay = new BreakOverlayWindow(screen, _settings.ReflectionPrompt, secondScale, phase, _settings.ReduceMotion);
             ApplyIcon(overlay);
             overlay.SetPhaseTitle(title);
             overlay.UpdateTime(_engine.Remaining);

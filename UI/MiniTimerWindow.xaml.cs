@@ -15,6 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using FocusFlow.Core;
@@ -37,8 +38,9 @@ public partial class MiniTimerWindow : Window
         new SolidColorBrush(Color.FromRgb(0xE8, 0xB9, 0x8C)); // amber
     private static readonly Brush LongBreakBrush =
         new SolidColorBrush(Color.FromRgb(0xE0, 0xA0, 0xA0)); // rose
-    private static readonly Brush IdleBrush =
-        new SolidColorBrush(Color.FromRgb(0xB7, 0xAE, 0xC2)); // muted
+    // L1: IdleBrush resolved from the theme token at load time instead of a
+    // hard-coded #B7AEC2. Theme.xaml lifts muted to #C6BFD2; this stays in sync.
+    private Brush _idleBrush = System.Windows.SystemColors.GrayTextBrush; // replaced in OnLoaded
     private static readonly Brush AwaitingBrush =
         new SolidColorBrush(Color.FromRgb(0xE8, 0xB9, 0x8C)); // amber "waiting"
     private static readonly Brush PrimaryTextBrush =
@@ -65,6 +67,11 @@ public partial class MiniTimerWindow : Window
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        // L1: resolve the muted idle brush from the theme token so it tracks
+        // any future theme updates rather than being hard-coded to the old #B7AEC2.
+        if (TryFindResource("Brush.Text.Muted") is Brush muted)
+            _idleBrush = muted;
+
         // Restore saved position, else dock near bottom-right of work area.
         if (!double.IsNaN(_settings.MiniTimerX) && !double.IsNaN(_settings.MiniTimerY)
             && IsOnScreen(_settings.MiniTimerX, _settings.MiniTimerY))
@@ -147,32 +154,39 @@ public partial class MiniTimerWindow : Window
         switch (phase)
         {
             case Phase.Idle:
-                // Prose phrase (em-dash) -> NORMAL text, not tracked caps.
-                PhaseLabel.Text = "Idle — press Start";
-                PhaseLabel.Foreground = IdleBrush;
-                PhaseDot.Fill = IdleBrush;
+                // L2: colon replaces the banned em dash.
+                // M2: AutomationProperties.Name carries the clean phrase for screen readers.
+                PhaseLabel.Text = "Idle: press Start";
+                AutomationProperties.SetName(PhaseLabel, "Idle: press Start");
+                PhaseLabel.Foreground = _idleBrush; // L1: from theme token
+                PhaseDot.Fill = _idleBrush;
                 TimeLabel.Foreground = PrimaryTextBrush;
                 break;
             case Phase.Focus:
+                // M2: visual text is tracked-out ("F O C U S"); a11y name is clean.
                 PhaseLabel.Text = TrackOut("Focus");
+                AutomationProperties.SetName(PhaseLabel, "Focus");
                 PhaseLabel.Foreground = FocusBrush;
                 PhaseDot.Fill = FocusBrush;
                 TimeLabel.Foreground = PrimaryTextBrush;
                 break;
             case Phase.ShortBreak:
                 PhaseLabel.Text = TrackOut("Short break");
+                AutomationProperties.SetName(PhaseLabel, "Short break");
                 PhaseLabel.Foreground = ShortBreakBrush;
                 PhaseDot.Fill = ShortBreakBrush;
                 TimeLabel.Foreground = PrimaryTextBrush;
                 break;
             case Phase.LongBreak:
                 PhaseLabel.Text = TrackOut("Long break");
+                AutomationProperties.SetName(PhaseLabel, "Long break");
                 PhaseLabel.Foreground = LongBreakBrush;
                 PhaseDot.Fill = LongBreakBrush;
                 TimeLabel.Foreground = PrimaryTextBrush;
                 break;
             case Phase.AwaitingReturn:
                 PhaseLabel.Text = TrackOut("Break over");
+                AutomationProperties.SetName(PhaseLabel, "Break over");
                 PhaseLabel.Foreground = AwaitingBrush;
                 PhaseDot.Fill = AwaitingBrush;
                 // "Ready?" is a status word, not a countdown — accent reads here.
@@ -185,8 +199,24 @@ public partial class MiniTimerWindow : Window
         UpdateButtonLabel(phase, isRunning);
     }
 
+    /// <summary>
+    /// Determine whether looping animations should run.
+    /// Suppressed when the user toggled ReduceMotion OR when the OS has
+    /// ClientAreaAnimation disabled (System > Accessibility > Visual effects).
+    /// </summary>
+    private bool AnimationsEnabled =>
+        !_settings.ReduceMotion && SystemParameters.ClientAreaAnimation;
+
     private void StartDotPulse()
     {
+        // H2: honour ReduceMotion and OS ClientAreaAnimation.
+        if (!AnimationsEnabled)
+        {
+            // Render the dot at a calm steady opacity instead of pulsing.
+            PhaseDot.Opacity = 0.7;
+            return;
+        }
+
         var pulse = new DoubleAnimation(1.0, 0.35, TimeSpan.FromSeconds(1.1))
         {
             AutoReverse = true,

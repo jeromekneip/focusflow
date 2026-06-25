@@ -16,12 +16,13 @@
 
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using FocusFlow.Models;
-using MessageBox = System.Windows.MessageBox;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxImage = System.Windows.MessageBoxImage;
 using MouseButton = System.Windows.Input.MouseButton;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace FocusFlow.UI;
 
@@ -33,6 +34,10 @@ public partial class SettingsWindow : Window
 {
     private Settings _working;
 
+    // Inline validation: warning border tint applied to invalid fields.
+    private static readonly SolidColorBrush WarningBorder =
+        new(System.Windows.Media.Color.FromArgb(0xCC, 0xE8, 0x7A, 0x4A));
+
     /// <summary>Raised with the saved settings instance when the user clicks Save.</summary>
     public event Action<Settings>? SettingsSaved;
 
@@ -42,6 +47,108 @@ public partial class SettingsWindow : Window
         // Work on a clone so Cancel discards edits.
         _working = Clone(current);
         LoadIntoUi();
+
+        // Wire up inline validation handlers for the four numeric inputs.
+        WireValidation(FocusBox);
+        WireValidation(ShortBox);
+        WireValidation(LongBox);
+        WireValidation(BlocksBox);
+
+        // Wire reflection placeholder visibility (L5).
+        ReflectionBox.TextChanged += (_, _) => UpdateReflectionPlaceholder();
+        UpdateReflectionPlaceholder();
+
+        // Entrance fade-in (L3) — mirrors the overlay RootLayer entrance.
+        Loaded += (_, _) => BeginEntranceFade();
+    }
+
+    /// <summary>Attach digit-only input filtering and live validation to a TextBox.</summary>
+    private void WireValidation(TextBox box)
+    {
+        // Block non-digit keypresses at input time.
+        box.PreviewTextInput += OnNumericPreviewTextInput;
+        // Block paste of non-numeric content.
+        System.Windows.DataObject.AddPastingHandler(box, OnNumericPaste);
+        // Re-validate (update Save button state) on every text change.
+        box.TextChanged += (_, _) => UpdateSaveButtonState();
+    }
+
+    /// <summary>Allow only digit characters through PreviewTextInput.</summary>
+    private void OnNumericPreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        // Reject anything that is not a digit string.
+        e.Handled = !IsAllDigits(e.Text);
+    }
+
+    /// <summary>Strip non-digit characters from pasted text.</summary>
+    private void OnNumericPaste(object sender, DataObjectPastingEventArgs e)
+    {
+        if (e.DataObject.GetDataPresent(typeof(string)))
+        {
+            string pasted = (string)e.DataObject.GetData(typeof(string));
+            if (!IsAllDigits(pasted))
+                e.CancelCommand();
+        }
+        else
+        {
+            e.CancelCommand();
+        }
+    }
+
+    private static bool IsAllDigits(string? s) =>
+        !string.IsNullOrEmpty(s) && s.All(char.IsDigit);
+
+    /// <summary>
+    /// Apply or remove the inline warning state on a TextBox. Uses BorderBrush +
+    /// a warning tint to signal invalid input without a MessageBox.
+    /// </summary>
+    private static void SetFieldError(TextBox box, bool hasError)
+    {
+        if (hasError)
+        {
+            box.BorderBrush = WarningBorder;
+            box.BorderThickness = new Thickness(1.5);
+        }
+        else
+        {
+            // Reset to the FieldBox template defaults (hairline-hi, 1px).
+            box.ClearValue(TextBox.BorderBrushProperty);
+            box.ClearValue(TextBox.BorderThicknessProperty);
+        }
+    }
+
+    /// <summary>
+    /// Validate all four numeric fields; update each field's error state and
+    /// enable/disable the Save button accordingly.
+    /// </summary>
+    private void UpdateSaveButtonState()
+    {
+        bool focusOk = TryParsePositive(FocusBox.Text, out _);
+        bool shortOk = TryParsePositive(ShortBox.Text, out _);
+        bool longOk = TryParsePositive(LongBox.Text, out _);
+        bool blocksOk = TryParsePositive(BlocksBox.Text, out _);
+
+        SetFieldError(FocusBox, !focusOk);
+        SetFieldError(ShortBox, !shortOk);
+        SetFieldError(LongBox, !longOk);
+        SetFieldError(BlocksBox, !blocksOk);
+
+        SaveButton.IsEnabled = focusOk && shortOk && longOk && blocksOk;
+    }
+
+    /// <summary>Brief entrance fade-in to match the overlay's RootLayer stagger (L3).</summary>
+    private void BeginEntranceFade()
+    {
+        Opacity = 0;
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
+            TimeSpan.FromSeconds(0.28))
+        {
+            EasingFunction = new System.Windows.Media.Animation.CubicEase
+            {
+                EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut
+            }
+        };
+        BeginAnimation(OpacityProperty, fade);
     }
 
     private static Settings Clone(Settings s) => new()
@@ -55,6 +162,7 @@ public partial class SettingsWindow : Window
         MiniTimerAlwaysOnTop = s.MiniTimerAlwaysOnTop,
         OverlayEnabled = s.OverlayEnabled,
         ConfirmReturnAfterBreak = s.ConfirmReturnAfterBreak,
+        ReduceMotion = s.ReduceMotion,
         ReflectionPrompt = s.ReflectionPrompt,
         MiniTimerX = s.MiniTimerX,
         MiniTimerY = s.MiniTimerY,
@@ -86,8 +194,11 @@ public partial class SettingsWindow : Window
         OnTopCheck.IsChecked = _working.MiniTimerAlwaysOnTop;
         OverlayCheck.IsChecked = _working.OverlayEnabled;
         ConfirmReturnCheck.IsChecked = _working.ConfirmReturnAfterBreak;
+        ReduceMotionCheck.IsChecked = _working.ReduceMotion;
         ReflectionBox.Text = _working.ReflectionPrompt;
 
+        // Sync Save button state after populating (all valid on initial load).
+        UpdateSaveButtonState();
         HighlightActivePreset();
     }
 
@@ -132,14 +243,14 @@ public partial class SettingsWindow : Window
     {
         bool secondScale = _working.IsSecondScale;
 
+        // Inline validation already guards Save button; re-check defensively.
         if (!TryParsePositive(FocusBox.Text, out int focus) ||
             !TryParsePositive(ShortBox.Text, out int shortB) ||
             !TryParsePositive(LongBox.Text, out int longB) ||
             !TryParsePositive(BlocksBox.Text, out int blocks))
         {
-            MessageBox.Show(this,
-                "Durations and blocks must be positive whole numbers.",
-                "Invalid input", MessageBoxButton.OK, MessageBoxImage.Warning);
+            // Should not reach here with the button gating, but keep as a safe-stop.
+            UpdateSaveButtonState();
             return;
         }
 
@@ -162,6 +273,7 @@ public partial class SettingsWindow : Window
         _working.MiniTimerAlwaysOnTop = OnTopCheck.IsChecked == true;
         _working.OverlayEnabled = OverlayCheck.IsChecked == true;
         _working.ConfirmReturnAfterBreak = ConfirmReturnCheck.IsChecked == true;
+        _working.ReduceMotion = ReduceMotionCheck.IsChecked == true;
         _working.ReflectionPrompt = ReflectionBox.Text;
 
         _working.Save();
@@ -173,6 +285,16 @@ public partial class SettingsWindow : Window
     {
         return int.TryParse(text?.Trim(), NumberStyles.Integer,
                    CultureInfo.InvariantCulture, out value) && value > 0;
+    }
+
+    /// <summary>
+    /// Show the placeholder watermark when the reflection box is empty;
+    /// hide it as soon as the user types anything.
+    /// </summary>
+    private void UpdateReflectionPlaceholder()
+    {
+        ReflectionPlaceholder.Visibility =
+            string.IsNullOrEmpty(ReflectionBox.Text) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => Close();

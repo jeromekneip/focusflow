@@ -24,6 +24,85 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <!-- Themed scrollbar: thin (8px) low-contrast track + accent thumb.
+             Matches the dusk aesthetic when the settings card content scrolls.
+             RepeatButton parts are zeroed out so only the thumb is interactive. -->
+        <Style x:Key="ScrollBarThumb.Dusk" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border CornerRadius="4"
+                                Background="{StaticResource Brush.Control.Border}"
+                                Opacity="0.72"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ScrollBar.Dusk" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" SnapsToDevicePixels="True"
+                              Background="Transparent">
+                            <!-- Faint track -->
+                            <Border CornerRadius="4"
+                                    Background="#0CFFFFFF"
+                                    Margin="2,4"/>
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <!-- Zero-size so the track fills the full height. -->
+                                    <RepeatButton Command="ScrollBar.LineUpCommand"
+                                                  Width="0" Height="0"
+                                                  Opacity="0"
+                                                  Focusable="False"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.LineDownCommand"
+                                                  Width="0" Height="0"
+                                                  Opacity="0"
+                                                  Focusable="False"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumb.Dusk}"
+                                           Margin="1,0"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ScrollViewer that hosts the Dusk scrollbar. -->
+        <Style x:Key="ScrollViewer.Dusk" TargetType="ScrollViewer">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollContentPresenter Grid.Column="0"
+                                                    CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <ScrollBar x:Name="PART_VerticalScrollBar"
+                                       Grid.Column="1"
+                                       Style="{StaticResource ScrollBar.Dusk}"
+                                       Orientation="Vertical"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Outer surface now speaks the hero language: dusk gradient + warm radial
@@ -97,12 +176,14 @@
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
                             ToolTip="Close"
+                            AutomationProperties.Name="Close"
                             IsCancel="True"
                             Click="OnCancel"/>
                 </Grid>
 
-                <!-- Scrollable body (guards against clipping) -->
+                <!-- Scrollable body (guards against clipping); themed scrollbar (L4). -->
                 <ScrollViewer Grid.Row="1"
+                              Style="{StaticResource ScrollViewer.Dusk}"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="0,0,6,0">
@@ -179,6 +260,8 @@
                                   Content="Full-screen break overlay"/>
                         <CheckBox x:Name="ConfirmReturnCheck" Style="{StaticResource ThemedCheckBox}"
                                   Content="Confirm I'm back at my desk before resuming focus"/>
+                        <CheckBox x:Name="ReduceMotionCheck" Style="{StaticResource ThemedCheckBox}"
+                                  Content="Reduce motion (suppress looping ring and pulse animations)"/>
 
                         <!-- ===== REFLECTION ===== -->
                         <TextBlock Style="{StaticResource SectionLabel}" Text="R E F L E C T I O N" Margin="0,22,0,2"/>
@@ -186,13 +269,29 @@
                         <TextBlock Style="{StaticResource Caption}"
                                    Text="Shown on the break overlay."
                                    Margin="0,0,0,8"/>
-                        <TextBox x:Name="ReflectionBox"
-                                 Style="{StaticResource FieldBox}"
-                                 Height="84"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 VerticalContentAlignment="Top"
-                                 VerticalScrollBarVisibility="Auto"/>
+                        <!-- Reflection box with watermark overlay (L5).
+                             A transparent Grid lets the placeholder TextBlock sit
+                             behind the actual TextBox; it hides when the box has text
+                             via a DataTrigger in the code-behind (toggled on TextChanged). -->
+                        <Grid>
+                            <TextBox x:Name="ReflectionBox"
+                                     Style="{StaticResource FieldBox}"
+                                     Height="84"
+                                     TextWrapping="Wrap"
+                                     AcceptsReturn="True"
+                                     VerticalContentAlignment="Top"
+                                     VerticalScrollBarVisibility="Auto"/>
+                            <TextBlock x:Name="ReflectionPlaceholder"
+                                       Style="{StaticResource Caption}"
+                                       Text="e.g. Are you still working on the right thing?"
+                                       Foreground="{StaticResource Brush.Text.Muted}"
+                                       Opacity="0.55"
+                                       Margin="10,8,8,8"
+                                       VerticalAlignment="Top"
+                                       TextWrapping="Wrap"
+                                       IsHitTestVisible="False"
+                                       Visibility="Collapsed"/>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
 

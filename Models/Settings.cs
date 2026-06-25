@@ -66,6 +66,14 @@ public sealed class Settings
     // Which preset is active (informational; durations above are authoritative).
     public Preset ActivePreset { get; set; } = Preset.DeepWork;
 
+    /// <summary>
+    /// When true, continuously-looping animations (ring breathing, dot pulse)
+    /// are suppressed. The app also gates on SystemParameters.ClientAreaAnimation
+    /// at runtime so OS-level "Reduce motion" is always honoured regardless of this
+    /// flag. Default false (animations on).
+    /// </summary>
+    public bool ReduceMotion { get; set; } = false;
+
     // ---- Convenience minute accessors for the UI (whole minutes) ----
     [JsonIgnore]
     public int FocusMinutes
