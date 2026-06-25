@@ -168,19 +168,42 @@
                             <TranslateTransform x:Name="ButtonsT" Y="16"/>
                         </Grid.RenderTransform>
 
-                        <!-- During-break controls: skip + extend, ghost. -->
+                        <!-- During-break controls: skip + extend + postpone, ghost. -->
                         <StackPanel x:Name="BreakControls"
-                                    Orientation="Horizontal"
+                                    Orientation="Vertical"
                                     HorizontalAlignment="Center">
-                            <Button x:Name="BackButton"
+                            <!-- Primary row: Skip break | +5 min -->
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Center">
+                                <Button x:Name="BackButton"
+                                        Style="{StaticResource GhostButton}"
+                                        Content="Skip break"
+                                        Margin="0,0,16,0"
+                                        Click="OnBackClick"/>
+                                <Button x:Name="ExtendButton"
+                                        Style="{StaticResource GhostButton}"
+                                        Content="+5 min"
+                                        Click="OnExtendClick"/>
+                            </StackPanel>
+                            <!-- Second row: "Work 5 more min" — postpones the break. -->
+                            <Button x:Name="PostponeButton"
                                     Style="{StaticResource GhostButton}"
-                                    Content="Skip break"
-                                    Margin="0,0,16,0"
-                                    Click="OnBackClick"/>
-                            <Button x:Name="ExtendButton"
-                                    Style="{StaticResource GhostButton}"
-                                    Content="+5 min"
-                                    Click="OnExtendClick"/>
+                                    Content="Work 5 more min"
+                                    HorizontalAlignment="Center"
+                                    Margin="0,12,0,0"
+                                    Click="OnPostponeClick"/>
+                            <!-- Soft-cap nudge: shown once PostponeNudgeThreshold is reached. -->
+                            <TextBlock x:Name="PostponeNudge"
+                                       Style="{StaticResource Caption}"
+                                       Text="Postponing a lot? Consider adjusting your focus and break times in Settings."
+                                       Foreground="{StaticResource Brush.Text.Primary}"
+                                       Opacity="0.55"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       MaxWidth="420"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,10,0,0"
+                                       Visibility="Collapsed"/>
                         </StackPanel>
 
                         <!-- Post-break confirm control: single prominent button.

@@ -313,6 +313,16 @@ public partial class App : Application
                 _engine.ConfirmReturn(); // AwaitingReturn -> Focus; PhaseChanged closes overlays
                 RefreshRunStateUi();
             };
+            overlay.PostponeClicked += () =>
+            {
+                _engine.PostponeBreak(); // break -> transient Focus; PhaseChanged closes overlays
+                // Show the soft-cap nudge on every overlay once the threshold is reached.
+                if (_engine.PostponeCount >= TimerEngine.PostponeNudgeThreshold)
+                {
+                    foreach (var o in _overlays) o.ShowPostponeNudge();
+                }
+                RefreshRunStateUi();
+            };
 
             _overlays.Add(overlay);
             overlay.Show();

@@ -44,6 +44,7 @@ public partial class BreakOverlayWindow : Window
     public event Action? BackClicked;
     public event Action? ExtendClicked;
     public event Action? ConfirmClicked;
+    public event Action? PostponeClicked;
 
     // Win32 interop for exact physical-pixel placement.
     [DllImport("user32.dll", SetLastError = true)]
@@ -212,6 +213,18 @@ public partial class BreakOverlayWindow : Window
     private void OnExtendClick(object sender, RoutedEventArgs e) => ExtendClicked?.Invoke();
 
     private void OnConfirmClick(object sender, RoutedEventArgs e) => ConfirmClicked?.Invoke();
+
+    private void OnPostponeClick(object sender, RoutedEventArgs e) => PostponeClicked?.Invoke();
+
+    /// <summary>
+    /// Reveal the soft-cap nudge text beneath the postpone button. Called by
+    /// App.xaml.cs once the engine's PostponeCount reaches PostponeNudgeThreshold.
+    /// The button stays enabled — this is advisory only.
+    /// </summary>
+    public void ShowPostponeNudge()
+    {
+        PostponeNudge.Visibility = Visibility.Visible;
+    }
 
     /// <summary>
     /// Switch the overlay from the live break countdown to the "welcome back /

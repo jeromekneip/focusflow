@@ -43,11 +43,37 @@ public enum Phase
 /// </summary>
 public sealed class TimerEngine
 {
+    // --- Postpone constants (seconds-based to match the rest of the codebase) ---
+
+    /// <summary>How long the top-up focus window lasts after pressing "Work 5 more min".</summary>
+    public const int PostponeSeconds = 5 * 60;          // 300 s = 5 min
+
+    /// <summary>
+    /// Number of consecutive postpones before the soft-cap nudge appears on the
+    /// overlay. The button stays enabled at and above this threshold.
+    /// </summary>
+    public const int PostponeNudgeThreshold = 2;
+
     private readonly DispatcherTimer _timer;
     private Settings _settings;
 
     private int _remainingSeconds;
     private int _completedFocusBlocks;
+
+    // --- Postpone state ---
+    // When non-null, a postponed break is pending: the next auto-advance from a
+    // top-up focus window re-enters this phase instead of applying the normal cadence.
+    private Phase? _pendingBreakPhase;
+
+    // How many consecutive times the CURRENT pending break has been postponed.
+    // Resets when the break is actually taken or a legitimate focus block begins.
+    private int _postponeCount;
+
+    /// <summary>
+    /// How many consecutive times the currently pending break has been postponed.
+    /// The overlay uses this to decide whether to show the soft-cap nudge.
+    /// </summary>
+    public int PostponeCount => _postponeCount;
 
     public Phase CurrentPhase { get; private set; } = Phase.Idle;
     public bool IsRunning { get; private set; }
@@ -142,6 +168,10 @@ public sealed class TimerEngine
     {
         if (CurrentPhase != Phase.AwaitingReturn) return;
         AwaitingSince = null;
+        // The break was actually taken (via AwaitingReturn path), so the pending
+        // slot is already cleared by EndBreak. Belt-and-suspenders clear here too.
+        _pendingBreakPhase = null;
+        _postponeCount = 0;
         IsRunning = true;
         EnterPhase(Phase.Focus);
         if (!_timer.IsEnabled) _timer.Start();
@@ -183,6 +213,8 @@ public sealed class TimerEngine
         _completedFocusBlocks = 0;
         _remainingSeconds = 0;
         AwaitingSince = null;
+        _pendingBreakPhase = null;
+        _postponeCount = 0;
         CurrentPhase = Phase.Idle;
         PhaseChanged?.Invoke(CurrentPhase);
         Tick?.Invoke(Remaining);
@@ -195,6 +227,43 @@ public sealed class TimerEngine
         if (CurrentPhase is Phase.Idle or Phase.AwaitingReturn) return;
         _remainingSeconds += 5 * 60;
         Tick?.Invoke(Remaining);
+    }
+
+    /// <summary>
+    /// Postpone the current break: save which break is pending, run a short
+    /// <see cref="PostponeSeconds"/>-long top-up focus window, then automatically
+    /// re-trigger the SAME break when the top-up elapses.
+    ///
+    /// Rules:
+    ///   - Only valid during an active ShortBreak or LongBreak (not during
+    ///     AwaitingReturn, Idle, or a top-up focus window — callers should guard).
+    ///   - Does NOT increment <see cref="_completedFocusBlocks"/>, so the long-break
+    ///     cadence is not disrupted.
+    ///   - No hard block: the user may postpone as many times as desired;
+    ///     <see cref="_postponeCount"/> just increments and the nudge threshold fires.
+    ///   - The counter resets only when the pending break is actually taken
+    ///     (break runs to completion or is skipped) or when a fresh cycle begins.
+    /// </summary>
+    public void PostponeBreak()
+    {
+        if (CurrentPhase is not (Phase.ShortBreak or Phase.LongBreak)) return;
+
+        // Remember which break is pending so we can re-trigger it after the top-up.
+        _pendingBreakPhase = CurrentPhase;
+        _postponeCount++;
+
+        // Transition into a transient focus window WITHOUT advancing the block counter.
+        // We drive this manually rather than calling AdvancePhase so the counter stays clean.
+        IsRunning = true;
+        CurrentPhase = Phase.Focus;
+        _remainingSeconds = PostponeSeconds;
+        PhaseChanged?.Invoke(Phase.Focus);
+        Tick?.Invoke(Remaining);
+
+        if (!_timer.IsEnabled)
+        {
+            _timer.Start();
+        }
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
@@ -223,6 +292,20 @@ public sealed class TimerEngine
         switch (CurrentPhase)
         {
             case Phase.Focus:
+                // If a break was postponed, re-trigger THAT break instead of
+                // applying the normal cadence. The block counter is not incremented
+                // because PostponeBreak() already bypassed it.
+                if (_pendingBreakPhase.HasValue)
+                {
+                    Phase pending = _pendingBreakPhase.Value;
+                    // Leave the pending slot open so further postpones can re-queue.
+                    // _postponeCount is preserved — it accumulates across all
+                    // postpones of the same break and is reset by EndBreak / ConfirmReturn.
+                    EnterPhase(pending);
+                    break;
+                }
+
+                // Normal cadence: a genuine focus block ended.
                 _completedFocusBlocks++;
                 if (_completedFocusBlocks >= _settings.BlocksPerLongBreak)
                 {
@@ -262,9 +345,17 @@ public sealed class TimerEngine
     /// Common end-of-break transition. If confirmation is enabled and the break
     /// ended on its own (timer), stop and wait in AwaitingReturn; otherwise go
     /// straight to Focus (today's behavior / explicit skip).
+    ///
+    /// Also resets the postpone counter: the break is NOW being taken, so the
+    /// pending-break slot and postpone count no longer apply.
     /// </summary>
     private void EndBreak(bool fromTimer)
     {
+        // Break is being taken (either running to completion or explicitly skipped).
+        // Clear the pending slot and reset the counter for the next break cycle.
+        _pendingBreakPhase = null;
+        _postponeCount = 0;
+
         if (fromTimer && _settings.ConfirmReturnAfterBreak)
         {
             EnterAwaitingReturn();
