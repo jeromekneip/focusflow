@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="FocusFlow"
-        Width="208"
+        Width="226"
         MinHeight="104"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -47,9 +47,13 @@
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"/>
         </Button>
-        <!-- Inner content grid: 6px right padding reserves a non-drag gap next to
-             the gear button so a near-miss on it does not start a window drag (M5). -->
-        <Grid Margin="14,11,34,11">
+        <!-- Inner content grid: symmetric 14px horizontal padding. The gear button
+             sits in the outer overlay Grid at VerticalAlignment=Top so it only
+             occupies the top-right corner and never constrains the button row.
+             M5 used 34px right which pushed the Skip button out of the 142px
+             content width. Window widened to 226px with symmetric 14px margins
+             gives 180px content, 20px clear of the 160px button row. -->
+        <Grid Margin="14,11,14,11">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <!-- H1: cycle-position dots row -->
