@@ -216,7 +216,8 @@
                                     Content="Work 5 more min"
                                     HorizontalAlignment="Center"
                                     Margin="0,0,0,0"
-                                    Click="OnPostponeClick"/>
+                                    Click="OnPostponeClick"
+                                    ToolTip="Postpone the break and keep working for 5 minutes, then the break starts again."/>
                             <!-- Soft-cap nudge shown once PostponeNudgeThreshold is reached. -->
                             <!-- M2: self-compassion copy, dash-free. -->
                             <TextBlock x:Name="PostponeNudge"
@@ -231,13 +232,16 @@
                                        Margin="0,10,0,0"
                                        Visibility="Collapsed"/>
 
-                            <!-- Extend row: "+5 min" — quiet secondary action. -->
+                            <!-- Extend row: unambiguous label so it reads as break extension,
+                                 not additional work time. QuietGhost style preserved (M4 hierarchy). -->
                             <Button x:Name="ExtendButton"
                                     Style="{StaticResource QuietGhostButton}"
-                                    Content="+5 min"
+                                    Content="Extend break +5 min"
+                                    AutomationProperties.Name="Extend break +5 min"
                                     HorizontalAlignment="Center"
                                     Margin="0,14,0,0"
-                                    Click="OnExtendClick"/>
+                                    Click="OnExtendClick"
+                                    ToolTip="Make this break 5 minutes longer."/>
 
                             <!-- Faint divider separates the de-emphasised exit action. -->
                             <Border Height="1"
@@ -251,7 +255,8 @@
                                     Content="Skip break"
                                     HorizontalAlignment="Center"
                                     Margin="0,10,0,0"
-                                    Click="OnBackClick"/>
+                                    Click="OnBackClick"
+                                    ToolTip="End the break now and start the next focus block."/>
                         </StackPanel>
 
                         <!-- Post-break confirm control: single prominent button.
