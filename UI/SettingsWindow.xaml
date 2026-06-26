@@ -262,6 +262,8 @@
                                   Content="Confirm I'm back at my desk before resuming focus"/>
                         <CheckBox x:Name="ReduceMotionCheck" Style="{StaticResource ThemedCheckBox}"
                                   Content="Reduce motion (suppress looping ring and pulse animations)"/>
+                        <CheckBox x:Name="ShowDailyCountCheck" Style="{StaticResource ThemedCheckBox}"
+                                  Content="Show daily focus count on break overlay (today only)"/>
 
                         <!-- ===== REFLECTION ===== -->
                         <TextBlock Style="{StaticResource SectionLabel}" Text="R E F L E C T I O N" Margin="0,22,0,2"/>

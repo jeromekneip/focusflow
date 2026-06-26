@@ -52,6 +52,10 @@
         <Grid Margin="14,11,34,11">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
+                <!-- H1: cycle-position dots row -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <!-- H3: first-run nudge caption -->
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -75,20 +79,48 @@
                            AutomationProperties.Name="Idle"/>
             </StackPanel>
 
+            <!-- H1: cycle-position dot row. Filled dots = completed focus blocks;
+                 hollow dots = remaining blocks before the long break.
+                 Dots are generated from code-behind; hidden when in Idle/break phases. -->
+            <ItemsControl x:Name="CycleDotsPanel"
+                          Grid.Row="1"
+                          Margin="0,5,0,0"
+                          Visibility="Collapsed"
+                          AutomationProperties.Name="Cycle progress"
+                          Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
             <!-- Tabular serif countdown -->
             <TextBlock x:Name="TimeLabel"
-                       Grid.Row="1"
+                       Grid.Row="2"
                        Style="{StaticResource Numeral}"
                        Text="00:00"
                        FontSize="{StaticResource Size.Title}"
                        Margin="0,1,0,0"/>
+
+            <!-- H3: first-run nudge caption. Shown once at Idle until Start is pressed.
+                 Warm muted tone; collapses after FirstRunCompleted is set. -->
+            <TextBlock x:Name="FirstRunCaption"
+                       Grid.Row="3"
+                       Style="{StaticResource Caption}"
+                       Text="Press Start when you're ready to focus."
+                       Foreground="{StaticResource Brush.Text.Muted}"
+                       Opacity="0.72"
+                       TextWrapping="Wrap"
+                       Margin="0,4,0,0"
+                       Visibility="Collapsed"/>
 
             <!-- Control row. Buttons are visible AT REST (no hover needed). Which
                  buttons show is driven per AppPhase in code-behind:
                    Idle           -> StartButton (primary accent pill)
                    Running phases  -> PauseButton (Pause/Resume) + SkipButton
                    AwaitingReturn  -> PauseButton relabeled "I'm back" -->
-            <Grid Grid.Row="2" Margin="0,9,0,0">
+            <Grid Grid.Row="4" Margin="0,9,0,0">
                 <!-- Idle: single prominent Start. TabIndex=0 (primary action, M1). -->
                 <Button x:Name="StartButton"
                         Style="{StaticResource MiniPrimaryButton}"

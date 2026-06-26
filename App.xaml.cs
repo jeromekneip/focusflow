@@ -58,6 +58,14 @@ public partial class App : Application
     private bool _miniTimerHiddenForOverlay = false;
     private bool _miniTimerVisibleBeforeOverlay = true;
 
+    // L1: set true by the CycleCompleted handler before the LongBreak PhaseChanged
+    // fires, so ShowOverlays can pass it to the overlay constructor and then reset.
+    private bool _cycleJustCompleted = false;
+
+    // M1: genuine focus-block completions in the current engine run.
+    // Incremented only by the real AdvancePhase path (not postpone top-ups).
+    // Mirrors the exact logic the engine uses for _completedFocusBlocks++.
+
     /// <summary>
     /// Stable taskbar/toast identity. Set BEFORE any window exists so Windows
     /// associates the running process with the pinned shortcut (prevents the
@@ -139,9 +147,15 @@ public partial class App : Application
         _tray.SetRunningState(false, Phase.Idle);
         UpdateTooltip(Phase.Idle, TimeSpan.Zero);
 
-        // Discoverable hint that the user should press Start.
-        _tray.ShowBalloon("FocusFlow is running",
-            "Right-click the tray icon (or use the mini timer) to Start your first focus block.");
+        // H3: first-run nudge is now a gentle in-app caption + pulse on the Start
+        // button (MiniTimerWindow), so the tray balloon is no longer needed here.
+        // We still show a minimal "running" balloon for users who might miss the
+        // mini timer entirely, but without redundant instructions.
+        if (!_settings.FirstRunCompleted)
+        {
+            _tray.ShowBalloon("FocusFlow is ready",
+                "Press Start on the mini timer when you're ready to focus.");
+        }
     }
 
     // ---------------- Engine -> UI/Notifier ----------------
@@ -157,7 +171,33 @@ public partial class App : Application
 
         _engine.PhaseChanged += phase =>
         {
+            bool wasGenuineFocusCompletion = false;
+
+            // H2: detect a genuine focus-block completion (focus -> break, not from
+            // a postpone top-up). The engine already enforces this: PostponeBreak()
+            // does NOT increment _completedFocusBlocks, so when we enter a break
+            // with _engine.CompletedFocusBlocks > previous we know it was real.
+            if (phase is Phase.ShortBreak or Phase.LongBreak)
+            {
+                // If the engine's CompletedFocusBlocks just ticked up (or is > 0
+                // in the LongBreak case where it resets to 0 after CycleCompleted),
+                // we treat this as a genuine completion. The cycle-complete path
+                // resets to 0 BEFORE PhaseChanged fires, but _cycleJustCompleted
+                // is set by the CycleCompleted handler so we still know.
+                wasGenuineFocusCompletion = _cycleJustCompleted
+                    || (_engine.CompletedFocusBlocks > 0);
+
+                // M1: increment the daily count for genuine completions.
+                if (wasGenuineFocusCompletion)
+                {
+                    IncrementDailyCount();
+                }
+            }
+
             _miniTimer.UpdatePhase(phase, _engine.IsRunning);
+            // H1: refresh cycle dots every phase change.
+            _miniTimer.UpdateCycleDots(_engine.CompletedFocusBlocks,
+                _settings.BlocksPerLongBreak, phase);
             _tray.SetRunningState(_engine.IsRunning, phase);
             _notifier.NotifyPhase(phase);
             UpdateTooltip(phase, _engine.Remaining);
@@ -165,6 +205,12 @@ public partial class App : Application
             bool isBreak = phase is Phase.ShortBreak or Phase.LongBreak;
             if (isBreak && _settings.OverlayEnabled)
             {
+                // H2: play the micro-completion bloom on the mini timer's dot
+                // when transitioning from focus to a break (genuine completion only).
+                if (wasGenuineFocusCompletion)
+                {
+                    _miniTimer.PlayCompletionBloom();
+                }
                 ShowOverlays(phase);
             }
             else if (phase == Phase.AwaitingReturn)
@@ -182,8 +228,36 @@ public partial class App : Application
 
         _engine.CycleCompleted += () =>
         {
-            // A full cycle (long break finished). Toast already fired via phase change.
+            // L1: flag consumed by the next ShowOverlays call so the long-break
+            // overlay gets the warmer "Full cycle done, well earned." heading.
+            _cycleJustCompleted = true;
         };
+    }
+
+    /// <summary>
+    /// M1: increment today's focus block count, resetting when the date has changed.
+    /// Persisted to settings JSON (best-effort).
+    /// </summary>
+    private void IncrementDailyCount()
+    {
+        string today = DateTime.Today.ToString("yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        if (_settings.DailyCountDate != today)
+        {
+            // New day: reset.
+            _settings.DailyCountDate = today;
+            _settings.DailyFocusCount = 0;
+        }
+
+        _settings.DailyFocusCount++;
+        _settings.Save();
+
+        // Update tray tooltip with daily count when ShowDailyCount is on.
+        if (_settings.ShowDailyCount)
+        {
+            UpdateTooltip(_engine.CurrentPhase, _engine.Remaining);
+        }
     }
 
     private void UpdateTooltip(Phase phase, TimeSpan remaining)
@@ -194,7 +268,16 @@ public partial class App : Application
             Phase.AwaitingReturn => "Paused: click 'I'm back' to resume",
             _ => $"{phase} {(int)remaining.TotalMinutes:00}:{remaining.Seconds:00}"
         };
-        _tray.SetTooltip($"FocusFlow: {time}");
+
+        // M1: append daily count to tray tooltip when opt-in is enabled.
+        string suffix = "";
+        if (_settings.ShowDailyCount && _settings.DailyFocusCount > 0)
+        {
+            string plural = _settings.DailyFocusCount == 1 ? "block" : "blocks";
+            suffix = $" | {_settings.DailyFocusCount} {plural} today";
+        }
+
+        _tray.SetTooltip($"FocusFlow: {time}{suffix}");
     }
 
     // ---------------- Tray menu -> Engine ----------------
@@ -250,6 +333,15 @@ public partial class App : Application
         _tray.SetRunningState(_engine.IsRunning, _engine.CurrentPhase);
         _miniTimer.UpdateButtonLabel(_engine.CurrentPhase, _engine.IsRunning);
         _miniTimer.UpdatePhase(_engine.CurrentPhase, _engine.IsRunning);
+        // H1: keep cycle dots in sync after tray/button actions.
+        _miniTimer.UpdateCycleDots(_engine.CompletedFocusBlocks,
+            _settings.BlocksPerLongBreak, _engine.CurrentPhase);
+
+        // H3: complete the first-run nudge on the first successful Start.
+        if (_engine.IsRunning && !_settings.FirstRunCompleted)
+        {
+            _miniTimer.CompleteFirstRun();
+        }
     }
 
     private void ToggleMiniTimer()
@@ -293,12 +385,35 @@ public partial class App : Application
             }
         }
 
+        // L1: consume the cycle-complete flag here; reset it so subsequent
+        // short-break overlays don't inherit it.
+        bool isCycleDone = _cycleJustCompleted;
+        _cycleJustCompleted = false;
+
         string title = phase == Phase.LongBreak ? "Long break" : "Short break";
         bool secondScale = _settings.IsSecondScale;
 
+        // H1: current cycle position to pass to overlay dots.
+        int cycleCompleted = _engine.CompletedFocusBlocks;
+        int cycleTotal = _settings.BlocksPerLongBreak;
+
+        // M2: use the rotating prompt accessor (respects custom prompt).
+        string prompt = _settings.ActiveReflectionPrompt;
+
+        // M1: daily count info.
+        bool showDailyCount = _settings.ShowDailyCount;
+        int dailyCount = _settings.DailyFocusCount;
+
         foreach (var screen in WinForms.Screen.AllScreens)
         {
-            var overlay = new BreakOverlayWindow(screen, _settings.ReflectionPrompt, secondScale, phase, _settings.ReduceMotion);
+            var overlay = new BreakOverlayWindow(
+                screen, prompt, secondScale, phase,
+                reduceMotion: _settings.ReduceMotion,
+                cycleCompleted: cycleCompleted,
+                cycleTotal: cycleTotal,
+                showDailyCount: showDailyCount,
+                dailyCount: dailyCount,
+                isCycleDone: isCycleDone);
             ApplyIcon(overlay);
             overlay.SetPhaseTitle(title);
             overlay.UpdateTime(_engine.Remaining);
@@ -398,6 +513,10 @@ public partial class App : Application
         _engine.UpdateSettings(_settings);
         _notifier.UpdateSettings(_settings);
         _miniTimer.ApplySettings(_settings);
+
+        // H1: re-render cycle dots in case BlocksPerLongBreak changed.
+        _miniTimer.UpdateCycleDots(_engine.CompletedFocusBlocks,
+            _settings.BlocksPerLongBreak, _engine.CurrentPhase);
 
         if (autoStartChanged)
         {

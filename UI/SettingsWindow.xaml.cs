@@ -166,7 +166,12 @@ public partial class SettingsWindow : Window
         ReflectionPrompt = s.ReflectionPrompt,
         MiniTimerX = s.MiniTimerX,
         MiniTimerY = s.MiniTimerY,
-        ActivePreset = s.ActivePreset
+        ActivePreset = s.ActivePreset,
+        // H3, M1: carry over new fields.
+        FirstRunCompleted = s.FirstRunCompleted,
+        ShowDailyCount = s.ShowDailyCount,
+        DailyCountDate = s.DailyCountDate,
+        DailyFocusCount = s.DailyFocusCount
     };
 
     private void LoadIntoUi()
@@ -195,6 +200,7 @@ public partial class SettingsWindow : Window
         OverlayCheck.IsChecked = _working.OverlayEnabled;
         ConfirmReturnCheck.IsChecked = _working.ConfirmReturnAfterBreak;
         ReduceMotionCheck.IsChecked = _working.ReduceMotion;
+        ShowDailyCountCheck.IsChecked = _working.ShowDailyCount;
         ReflectionBox.Text = _working.ReflectionPrompt;
 
         // Sync Save button state after populating (all valid on initial load).
@@ -274,6 +280,7 @@ public partial class SettingsWindow : Window
         _working.OverlayEnabled = OverlayCheck.IsChecked == true;
         _working.ConfirmReturnAfterBreak = ConfirmReturnCheck.IsChecked == true;
         _working.ReduceMotion = ReduceMotionCheck.IsChecked == true;
+        _working.ShowDailyCount = ShowDailyCountCheck.IsChecked == true;
         _working.ReflectionPrompt = ReflectionBox.Text;
 
         _working.Save();

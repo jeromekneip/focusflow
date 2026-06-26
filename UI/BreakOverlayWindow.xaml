@@ -67,13 +67,29 @@
                                Text="SHORT BREAK"
                                FontSize="{StaticResource Size.Label}"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,34"
+                               Margin="0,0,0,10"
                                AutomationProperties.Name="Short break"
                                Opacity="0">
                         <TextBlock.RenderTransform>
                             <TranslateTransform x:Name="PhaseTitleT" Y="16"/>
                         </TextBlock.RenderTransform>
                     </TextBlock>
+
+                    <!-- H1: cycle-position dots. Same 9px PhaseDot motif, phase-accent
+                         filled up to completed blocks, hollow beyond. Built in code-behind.
+                         Shares the PhaseTitle entrance fade opacity (both start at 0 and
+                         are shown via the Loaded storyboard animation on PhaseTitle). -->
+                    <ItemsControl x:Name="OverlayCycleDotsPanel"
+                                  HorizontalAlignment="Center"
+                                  Margin="0,0,0,24"
+                                  AutomationProperties.Name="Cycle progress"
+                                  Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
 
                     <!-- Breathing ring: ~340px ellipse with the countdown centered inside.
                          All ring color stops are set from the phase accent in code-behind. -->
@@ -150,6 +166,18 @@
                              resting tone. A wrapper handles the fade-in. -->
                     </TextBlock>
 
+                    <!-- M1: opt-in daily focus count caption. Muted; shown only when
+                         ShowDailyCount is enabled. Populated from code-behind. -->
+                    <TextBlock x:Name="DailyCountLabel"
+                               Style="{StaticResource Caption}"
+                               Text=""
+                               Foreground="{StaticResource Brush.Text.Muted}"
+                               Opacity="0.6"
+                               TextAlignment="Center"
+                               Margin="0,16,0,0"
+                               HorizontalAlignment="Center"
+                               Visibility="Collapsed"/>
+
                     <!-- "Break ended X ago" accountability counter; shown only while
                          confirming. Rendered as NORMAL caption text (no space-hack);
                          numerals are tabular via the Numeral-derived treatment.
@@ -190,9 +218,10 @@
                                     Margin="0,0,0,0"
                                     Click="OnPostponeClick"/>
                             <!-- Soft-cap nudge shown once PostponeNudgeThreshold is reached. -->
+                            <!-- M2: self-compassion copy, dash-free. -->
                             <TextBlock x:Name="PostponeNudge"
                                        Style="{StaticResource Caption}"
-                                       Text="Postponing a lot? Consider adjusting your focus and break times in Settings."
+                                       Text="Hard to step away today? That's okay, you can tune your rhythm in Settings."
                                        Foreground="{StaticResource Brush.Text.Primary}"
                                        Opacity="0.55"
                                        TextAlignment="Center"

@@ -74,6 +74,66 @@ public sealed class Settings
     /// </summary>
     public bool ReduceMotion { get; set; } = false;
 
+    // ---- H3: first-run nudge ----
+    /// <summary>
+    /// Flipped to true after the user presses Start for the first time.
+    /// The first-run nudge (gentle glow on StartButton) is suppressed once set.
+    /// </summary>
+    public bool FirstRunCompleted { get; set; } = false;
+
+    // ---- M1: opt-in daily focus count (default OFF) ----
+    /// <summary>
+    /// When true, a muted caption on the break overlay shows how many focus blocks
+    /// the user has completed today. Default false.
+    /// </summary>
+    public bool ShowDailyCount { get; set; } = false;
+
+    /// <summary>Date for which DailyFocusCount is valid (ISO 8601 date string).</summary>
+    public string DailyCountDate { get; set; } = "";
+
+    /// <summary>Focus blocks completed on DailyCountDate. Resets when the date changes.</summary>
+    public int DailyFocusCount { get; set; } = 0;
+
+    // ---- M2: rotating reflection prompts ----
+
+    // Sentinel: the original default prompt text. When ReflectionPrompt equals this
+    // value (or is empty), we rotate among the seeded set instead of using it literally.
+    private const string DefaultPromptSentinel =
+        "Step back: are you still working on the right thing? What's the bigger picture?";
+
+    // Seeded prompt set. All entries are dash-free.
+    private static readonly string[] SeededPrompts =
+    {
+        "Are you still working on the right thing?",
+        "What one thing, if finished today, would make this day feel worthwhile?",
+        "Is the pace you are keeping sustainable for the rest of the day?",
+        "What can you set aside to stay focused on what matters most right now?"
+    };
+
+    // Index advances per break; stored as a thread-safe static so it persists for
+    // the lifetime of the process (across breaks in the same session).
+    private static int _promptIndex = -1;
+
+    /// <summary>
+    /// Returns the reflection prompt to display for this break.
+    /// If the user has set a custom prompt, it is returned unchanged.
+    /// Otherwise, the next prompt from the seeded set is returned.
+    /// </summary>
+    [JsonIgnore]
+    public string ActiveReflectionPrompt
+    {
+        get
+        {
+            bool isCustom = !string.IsNullOrWhiteSpace(ReflectionPrompt)
+                            && ReflectionPrompt != DefaultPromptSentinel;
+            if (isCustom) return ReflectionPrompt;
+
+            // Advance the index and wrap.
+            _promptIndex = (_promptIndex + 1) % SeededPrompts.Length;
+            return SeededPrompts[_promptIndex];
+        }
+    }
+
     // ---- Convenience minute accessors for the UI (whole minutes) ----
     [JsonIgnore]
     public int FocusMinutes

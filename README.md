@@ -15,6 +15,9 @@ A Pomodoro-style focus timer for Windows 11. Sits in the system tray, stays out 
 - "Work 5 more min" break-postpone option: delays the pending break without skipping it or disrupting the long-break cadence
 - Gear icon on the mini timer for one-click Settings access (no tray required)
 - Reduce Motion setting: suppresses looping ring and pulse animations; also honours the OS "ClientAreaAnimation" accessibility flag
+- Cycle-progress dots: ambient row of filled/hollow dots on the mini timer and break overlay showing position within the current cycle (block X of N before the long break)
+- First-run nudge: a one-time gentle caption and soft Start-button pulse on first launch, replaced by normal UI once the first focus block starts
+- Opt-in daily focus count: muted caption on the break overlay showing how many focus blocks you have completed today (Settings, Behavior section, default off; today-only, no streaks or totals)
 
 ## Requirements
 

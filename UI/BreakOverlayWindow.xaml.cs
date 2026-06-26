@@ -17,9 +17,11 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 using FocusFlow.Core;
 using WinForms = System.Windows.Forms;
@@ -61,20 +63,44 @@ public partial class BreakOverlayWindow : Window
 
     private readonly WinForms.Screen _screen;
 
-    public BreakOverlayWindow(WinForms.Screen screen, string reflectionPrompt, bool secondScale, Phase phase, bool reduceMotion = false)
+    // H1: phase accent color cached for cycle-dot rendering.
+    private Color _phaseAccent;
+
+    public BreakOverlayWindow(WinForms.Screen screen, string reflectionPrompt, bool secondScale,
+        Phase phase, bool reduceMotion = false,
+        int cycleCompleted = 0, int cycleTotal = 1,
+        bool showDailyCount = false, int dailyCount = 0,
+        bool isCycleDone = false)
     {
         InitializeComponent();
         _screen = screen;
         _secondScale = secondScale;
         _reduceMotion = reduceMotion;
+
+        // M2: use the supplied (possibly rotating) prompt; guard against empty.
         ReflectionText.Text = string.IsNullOrEmpty(reflectionPrompt)
-            ? "Step back: are you still working on the right thing?"  // L5: fallback
+            ? "Are you still working on the right thing?"
             : reflectionPrompt;
 
         // The breathing ring must wear the PHASE accent (amber short / rose long),
         // not the hard-coded sage. One accent -> two cohesive shades for the ring
         // gradient, plus glow + inner-fill + awaiting label.
         ApplyPhaseAccent(phase);
+
+        // H1: build cycle-position dots under the phase label.
+        BuildCycleDots(cycleCompleted, cycleTotal);
+
+        // M1: show daily focus count caption when the setting is enabled.
+        if (showDailyCount && dailyCount > 0)
+        {
+            string plural = dailyCount == 1 ? "focus block" : "focus blocks";
+            DailyCountLabel.Text = $"{dailyCount} {plural} today";
+            DailyCountLabel.Visibility = Visibility.Visible;
+        }
+
+        // L1: warmer heading when a full cycle was just completed.
+        // Stored for use in SetPhaseTitle after init.
+        _isCycleDone = isCycleDone;
 
         // Place provisionally in DIPs so the window has a sane initial location
         // before the HWND exists; refined in SourceInitialized via SetWindowPos.
@@ -92,6 +118,9 @@ public partial class BreakOverlayWindow : Window
         // then immediately cancels the forever-looping ring/inner-fill segments.
         Loaded += OnLoadedAnimationGate;
     }
+
+    // L1: flag set when a full cycle just completed.
+    private bool _isCycleDone;
 
     private bool _confirmShown;
 
@@ -135,6 +164,9 @@ public partial class BreakOverlayWindow : Window
             ? (Color)FindResource("Color.Accent.Long")    // rose
             : (Color)FindResource("Color.Accent.Short");  // amber (short break)
 
+        // H1: cache for cycle-dot rendering.
+        _phaseAccent = accent;
+
         Color bright = Lighten(accent, 0.34);   // top-left ring highlight
         Color deep = Darken(accent, 0.30);      // bottom-right ring shadow
 
@@ -152,6 +184,54 @@ public partial class BreakOverlayWindow : Window
 
         // "Break ended X ago" accountability label carries the accent too.
         AwaitingSinceLabel.Foreground = new SolidColorBrush(accent);
+    }
+
+    /// <summary>
+    /// H1: build the cycle-position dot row under the overlay phase label.
+    /// Filled dots (phase accent) up to completed; hollow muted dots beyond.
+    /// </summary>
+    private void BuildCycleDots(int completed, int total)
+    {
+        OverlayCycleDotsPanel.Items.Clear();
+
+        // Only meaningful when there is more than one block in a cycle.
+        if (total <= 1) return;
+
+        // Sage accent for filled dots matches the mini timer PhaseDot grammar.
+        Color focusColor;
+        try { focusColor = (Color)FindResource("Color.Accent.Focus"); }
+        catch { focusColor = Color.FromRgb(0x7F, 0xB7, 0xA6); }
+
+        Color mutedColor;
+        try { mutedColor = (Color)FindResource("Color.Text.Muted"); }
+        catch { mutedColor = Color.FromRgb(0xC6, 0xBF, 0xD2); }
+
+        for (int i = 0; i < total; i++)
+        {
+            bool filled = i < completed;
+            var dot = new Ellipse
+            {
+                Width = 9,
+                Height = 9,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, i < total - 1 ? 7 : 0, 0)
+            };
+
+            if (filled)
+            {
+                dot.Fill = new SolidColorBrush(focusColor);
+                dot.Opacity = 0.9;
+            }
+            else
+            {
+                dot.Fill = System.Windows.Media.Brushes.Transparent;
+                dot.Stroke = new SolidColorBrush(mutedColor);
+                dot.StrokeThickness = 1.4;
+                dot.Opacity = 0.4;
+            }
+
+            OverlayCycleDotsPanel.Items.Add(dot);
+        }
     }
 
     private static Color Lighten(Color c, double amount)
@@ -221,11 +301,26 @@ public partial class BreakOverlayWindow : Window
     /// appropriate here. Dynamic / prose text must NOT use TrackOut.
     /// M2: AutomationProperties.Name is set to the clean title word so screen
     /// readers do not spell out the inter-character spaces.
+    /// L1: when a full cycle was just completed, the long-break overlay gets a
+    /// slightly warmer heading ("Full cycle done, well earned.") instead of the
+    /// default tracked caps.
     /// </summary>
     public void SetPhaseTitle(string title)
     {
-        PhaseTitle.Text = TrackOut(title);
-        AutomationProperties.SetName(PhaseTitle, title);
+        if (_isCycleDone)
+        {
+            // L1: warmer prose heading for the cycle-complete long break.
+            // Rendered as Display serif, not tracked caps.
+            PhaseTitle.Style = (Style)FindResource("Display");
+            PhaseTitle.FontSize = (double)FindResource("Size.Title");
+            PhaseTitle.Text = "Full cycle done, well earned.";
+            AutomationProperties.SetName(PhaseTitle, "Full cycle done, well earned.");
+        }
+        else
+        {
+            PhaseTitle.Text = TrackOut(title);
+            AutomationProperties.SetName(PhaseTitle, title);
+        }
     }
 
     /// <summary>

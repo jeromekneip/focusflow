@@ -16,8 +16,11 @@
 
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using FocusFlow.Core;
 using FocusFlow.Models;
 using Brush = System.Windows.Media.Brush;
@@ -48,6 +51,13 @@ public partial class MiniTimerWindow : Window
 
     private readonly Settings _settings;
     private bool _secondScale;
+
+    // H1: last-rendered cycle dot state to avoid redundant rebuilds.
+    private int _lastDotsCompleted = -1;
+    private int _lastDotsTotal = -1;
+
+    // H3: first-run pulse storyboard reference so we can stop it on Start.
+    private Storyboard? _firstRunPulse;
 
     public event Action? PauseClicked;
     public event Action? SkipClicked;
@@ -89,6 +99,13 @@ public partial class MiniTimerWindow : Window
             var wa = SystemParameters.WorkArea;
             Left = wa.Right - w - 24;
             Top = wa.Bottom - h - 24;
+        }
+
+        // H3: show first-run nudge if this is the user's first session.
+        if (!_settings.FirstRunCompleted)
+        {
+            FirstRunCaption.Visibility = Visibility.Visible;
+            StartFirstRunPulse();
         }
     }
 
@@ -141,6 +158,140 @@ public partial class MiniTimerWindow : Window
     public void UpdateTime(TimeSpan remaining)
     {
         TimeLabel.Text = Format(remaining);
+    }
+
+    /// <summary>
+    /// H1: rebuild the cycle-position dot row when (completed, total) has changed.
+    /// Filled dots up to completed, hollow dots beyond. Hidden when phase is Idle
+    /// or a break (dots only make sense in a Focus context).
+    /// </summary>
+    public void UpdateCycleDots(int completed, int total, Phase phase)
+    {
+        // Only show dots while in a Focus (or AwaitingReturn) phase;
+        // hide during Idle and actual breaks.
+        bool showDots = phase is Phase.Focus or Phase.AwaitingReturn or Phase.ShortBreak or Phase.LongBreak
+                        && total > 1; // single-block cycles have no progress to show
+
+        if (!showDots)
+        {
+            CycleDotsPanel.Visibility = Visibility.Collapsed;
+            _lastDotsCompleted = -1;
+            _lastDotsTotal = -1;
+            return;
+        }
+
+        // Avoid redundant rebuilds.
+        if (completed == _lastDotsCompleted && total == _lastDotsTotal)
+        {
+            CycleDotsPanel.Visibility = Visibility.Visible;
+            return;
+        }
+
+        _lastDotsCompleted = completed;
+        _lastDotsTotal = total;
+
+        CycleDotsPanel.Items.Clear();
+        for (int i = 0; i < total; i++)
+        {
+            bool filled = i < completed;
+            // Reuse the PhaseDot motif: 9px ellipse, phase accent when filled, muted outline when hollow.
+            var dot = new Ellipse
+            {
+                Width = 7,
+                Height = 7,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, i < total - 1 ? 5 : 0, 0)
+            };
+
+            if (filled)
+            {
+                // Filled: use the focus accent brush.
+                dot.Fill = FocusBrush;
+                dot.Opacity = 0.9;
+            }
+            else
+            {
+                // Hollow: transparent fill, muted stroke ring.
+                dot.Fill = System.Windows.Media.Brushes.Transparent;
+                dot.Stroke = _idleBrush;
+                dot.StrokeThickness = 1.2;
+                dot.Opacity = 0.45;
+            }
+
+            CycleDotsPanel.Items.Add(dot);
+        }
+
+        CycleDotsPanel.Visibility = Visibility.Visible;
+    }
+
+    // ---- H3: first-run nudge pulse ----
+
+    /// <summary>
+    /// H3: start a single gentle opacity pulse on the StartButton to draw attention.
+    /// Runs only when AnimationsEnabled; falls back to a static muted-opacity hint.
+    /// Pulse stops automatically and is cleared when CompleteFirstRun() is called.
+    /// </summary>
+    private void StartFirstRunPulse()
+    {
+        if (!AnimationsEnabled)
+        {
+            // Reduced motion: just ensure StartButton is at full opacity.
+            StartButton.Opacity = 1.0;
+            return;
+        }
+
+        // Single slow pulse: 1.0 -> 0.55 -> 1.0 once (~0.9s each way), then holds.
+        // Not looped so it doesn't become distracting.
+        var pulse = new DoubleAnimation(1.0, 0.55, TimeSpan.FromSeconds(0.9))
+        {
+            AutoReverse = true,
+            RepeatBehavior = new RepeatBehavior(1),
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+        pulse.Completed += (_, _) => StartButton.Opacity = 1.0;
+
+        _firstRunPulse = new Storyboard();
+        _firstRunPulse.Children.Add(pulse);
+        Storyboard.SetTarget(pulse, StartButton);
+        Storyboard.SetTargetProperty(pulse, new PropertyPath(UIElement.OpacityProperty));
+        _firstRunPulse.Begin(this);
+    }
+
+    /// <summary>
+    /// H3: called when the user presses Start for the first time.
+    /// Stops the nudge pulse, hides the caption, and marks first-run done in settings.
+    /// </summary>
+    public void CompleteFirstRun()
+    {
+        if (_settings.FirstRunCompleted) return;
+
+        _settings.FirstRunCompleted = true;
+        _settings.Save();
+
+        _firstRunPulse?.Stop(this);
+        _firstRunPulse = null;
+        StartButton.Opacity = 1.0;
+        FirstRunCaption.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// H2: animate a brief accent bloom on the PhaseDot when a genuine focus block
+    /// completes (focus -> break transition). Reuses CubicEase at ~0.4s, gates on
+    /// AnimationsEnabled. The dot briefly brightens via opacity spike then settles.
+    /// </summary>
+    public void PlayCompletionBloom()
+    {
+        if (!AnimationsEnabled) return;
+
+        // Quick brightness spike: 1.0 -> 0.3 -> 1.0 in ~0.4s total.
+        var bloom = new DoubleAnimation(1.0, 0.25, TimeSpan.FromSeconds(0.18))
+        {
+            AutoReverse = true,
+            RepeatBehavior = new RepeatBehavior(1),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+        };
+        bloom.Completed += (_, _) => PhaseDot.Opacity = 1.0;
+        PhaseDot.BeginAnimation(UIElement.OpacityProperty, bloom);
     }
 
     public void UpdatePhase(Phase phase, bool isRunning)
